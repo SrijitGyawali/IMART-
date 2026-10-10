@@ -5,6 +5,7 @@ import type { Finish } from "./data";
 import { useTier } from "./motion/use-tier";
 import { acquireStringTune } from "./motion/string-tune";
 import { scene, setSceneVisible } from "./scene-store";
+import PhoneLayer from "./three/phone-layer";
 import "./landing.css";
 
 type Stage = "hero" | "film" | "light";
@@ -90,6 +91,14 @@ export function LandingExperience({
       data-tier={tier ?? undefined}
     >
       {children}
+      {tier !== null && tier !== "low" && (
+        <PhoneLayer
+          tier={tier}
+          initialFinish={initialFinish}
+          onReady={() => rootRef.current?.setAttribute("data-phone", "ready")}
+          onError={() => rootRef.current?.setAttribute("data-phone", "failed")}
+        />
+      )}
     </main>
   );
 }
