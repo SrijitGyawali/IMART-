@@ -1,3 +1,5 @@
+import { FilmLabels } from "./film-labels";
+
 const ACTS = [
   {
     id: "genuine",
@@ -25,26 +27,35 @@ const ACTS = [
   },
 ];
 
+/** Server-rendered acts; when motion is allowed the film pins and one scroll-scrubbed timeline plays them. */
 export function ProductFilm() {
   return (
     <section className="landing-film" data-stage-section="film" aria-label="Inside iMart">
-      <div className="landing-container">
-        {ACTS.map((act, i) => (
-          <article key={act.id} className="film-act" aria-labelledby={`act-${act.id}`}>
-            <p className="landing-label landing-label-signal">0{i + 1}</p>
-            <h2 id={`act-${act.id}`}>
-              {act.title.map((line) => (
-                <span key={line}>{line}</span>
-              ))}
-            </h2>
-            <p className="film-act-body">{act.body}</p>
-            <ul className="film-act-meta">
-              {act.meta.map((item) => (
-                <li key={item}>{item}</li>
-              ))}
-            </ul>
-          </article>
-        ))}
+      <div className="film-stage">
+        <ol className="film-rail" aria-hidden="true">
+          {[1, 2, 3, 4].map((n) => (
+            <li key={n} data-n={n}>0{n}</li>
+          ))}
+        </ol>
+        <div className="landing-container film-acts">
+          {ACTS.map((act, i) => (
+            <article key={act.id} className="film-act" data-act={i + 1} aria-labelledby={`act-${act.id}`}>
+              <p className="landing-label landing-label-signal">0{i + 1}</p>
+              <h2 id={`act-${act.id}`}>
+                {act.title.map((line) => (
+                  <span key={line}>{line}</span>
+                ))}
+              </h2>
+              <p className="film-act-body">{act.body}</p>
+              <ul className="film-act-meta">
+                {act.meta.map((item) => (
+                  <li key={item}>{item}</li>
+                ))}
+              </ul>
+            </article>
+          ))}
+        </div>
+        <FilmLabels />
       </div>
     </section>
   );

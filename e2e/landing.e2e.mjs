@@ -32,7 +32,8 @@ const attr = (page, name) => landing(page).getAttribute(name);
 const htmlAttr = (page, name) => page.evaluate((n) => document.documentElement.getAttribute(n), name);
 const htmlScroll = (page) => htmlAttr(page, "data-scroll");
 const headerBg = (page) => page.locator(".store-header").evaluate((el) => getComputedStyle(el).backgroundColor);
-const noHorizontalScroll = (page) => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1);
+// Compare with the device width: on phones an overflowing page widens the layout viewport itself.
+const noHorizontalScroll = (page) => page.evaluate((w) => window.innerWidth === w && document.documentElement.scrollWidth <= w + 1, page.viewportSize().width);
 const bootSettled = (page) => page.waitForFunction(() => document.documentElement.getAttribute("data-boot") !== "play", null, { timeout: 5000 });
 const entranceDone = (page) => page.waitForFunction(() => document.documentElement.getAttribute("data-entrance") === "done", null, { timeout: 6000 }).catch(() => {});
 
@@ -111,6 +112,28 @@ await d.mouse.wheel(0, 900);
 await d.waitForTimeout(1500);
 check("wheel scrolling moves the page", (await d.evaluate(() => window.scrollY)) > 600, String(await d.evaluate(() => window.scrollY)));
 
+// The pinned product film (moments 03–04)
+check("film: pinned when motion is allowed", (await attr(d, "data-film")) === "pinned");
+const scrollFilm = (f) =>
+  d.evaluate((f) => {
+    const s = document.querySelector(".landing-film");
+    const top = s.getBoundingClientRect().top + window.scrollY;
+    window.scrollTo(0, top + f * (s.offsetHeight - window.innerHeight));
+  }, f);
+for (const [f, act] of [[0.14, 1], [0.36, 2], [0.73, 3], [0.89, 4]]) {
+  await scrollFilm(f);
+  await d.waitForTimeout(1400);
+  const shown = await d.locator(".landing-film").getAttribute("data-act");
+  const opacity = await d.locator(`.film-act[data-act="${act}"]`).evaluate((el) => parseFloat(getComputedStyle(el).opacity));
+  check(`film: act 0${act} on screen at ${f}`, shown === String(act) && opacity > 0.5, `act=${shown} opacity=${opacity.toFixed(2)}`);
+  if (act === 2) {
+    const labels = await d.locator(".film-labels").evaluate((el) => parseFloat(getComputedStyle(el).opacity));
+    check("film: layer labels shown while open", labels > 0.4, `opacity=${labels.toFixed(2)}`);
+  }
+  await d.screenshot({ path: `${OUT}/p3-film-act${act}.png` });
+}
+check("no horizontal scroll inside the film (1440px)", await noHorizontalScroll(d));
+
 // Anchor navigation must work with smooth scroll on (navbar/footer link to /#help).
 await d.locator('.store-footer a[href="/#help"]').first().click();
 await d.waitForTimeout(2500);
@@ -143,6 +166,8 @@ check("smooth scroll back on after returning", (await htmlScroll(d)) === "smooth
 await d.goto(BASE + "/", { waitUntil: "domcontentloaded" });
 check("boot: skipped on the second visit", (await htmlAttr(d, "data-boot")) === "skip");
 
+await desk.close();
+
 // ---------- Skip the boot with a click ----------
 const skipCtx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
 const k = await skipCtx.newPage();
@@ -152,6 +177,8 @@ await k.waitForTimeout(150);
 await k.mouse.click(200, 400);
 await k.waitForTimeout(400);
 check("boot: a click finishes it immediately", (await htmlAttr(k, "data-boot")) === "done");
+
+await skipCtx.close();
 
 // ---------- Low tier (forced) ----------
 const low = await browser.newContext({ viewport: { width: 1440, height: 900 } });
@@ -163,6 +190,8 @@ check("low tier: no 3D layer", (await l.locator(".phone-layer").count()) === 0);
 check("low tier: poster image visible", await l.locator(".hero-poster").isVisible());
 check("low tier: native scroll", (await htmlScroll(l)) === "native", String(await htmlScroll(l)));
 
+await low.close();
+
 // ---------- Reduced motion ----------
 const calm = await browser.newContext({ viewport: { width: 1440, height: 900 }, reducedMotion: "reduce" });
 const r = await calm.newPage();
@@ -172,6 +201,10 @@ check("reduced motion: no boot", (await htmlAttr(r, "data-boot")) === "skip");
 check("reduced motion: content never hidden", (await htmlAttr(r, "data-entrance")) !== "pending");
 check("reduced motion: low tier", (await attr(r, "data-tier")) === "low");
 check("reduced motion: no 3D layer", (await r.locator(".phone-layer").count()) === 0);
+check("reduced motion: film stays a stacked story", (await attr(r, "data-film")) === null);
+check("reduced motion: every act readable", (await r.locator(".film-act").evaluateAll((els) => els.every((el) => getComputedStyle(el).opacity === "1"))) === true);
+
+await calm.close();
 
 // ---------- Mobile ----------
 const mob = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
@@ -180,6 +213,8 @@ watch(m, "mobile");
 await m.goto(BASE + "/", { waitUntil: "networkidle" });
 await bootSettled(m).catch(() => {});
 check("mobile: mid tier", (await attr(m, "data-tier")) === "mid", String(await attr(m, "data-tier")));
+// StringTune loads lazily; wait for it to report its mode rather than racing it.
+await m.waitForFunction(() => document.documentElement.dataset.scroll !== undefined, null, { timeout: 8000 }).catch(() => {});
 check("mobile: native scroll", (await htmlScroll(m)) === "native", String(await htmlScroll(m)));
 check("mobile: no cursor ring", (await m.locator(".cursor-ring").count()) === 0);
 check("mobile: no horizontal scroll", await noHorizontalScroll(m), String(await m.evaluate(() => document.documentElement.scrollWidth)));
@@ -188,6 +223,19 @@ check("mobile: 3D phone becomes ready", (await attr(m, "data-phone")) === "ready
 await entranceDone(m);
 await m.waitForTimeout(1200);
 await m.screenshot({ path: `${OUT}/p2-hero-mobile.png` });
+check("mobile: film pinned", (await attr(m, "data-film")) === "pinned");
+for (const f of [0.36, 0.89]) {
+  await m.evaluate((f) => {
+    const s = document.querySelector(".landing-film");
+    const top = s.getBoundingClientRect().top + window.scrollY;
+    window.scrollTo(0, top + f * (s.offsetHeight - window.innerHeight));
+  }, f);
+  await m.waitForTimeout(1400);
+  await m.screenshot({ path: `${OUT}/p3-film-mobile-${Math.round(f * 100)}.png` });
+}
+check("mobile: no horizontal scroll in the film", await noHorizontalScroll(m));
+
+await mob.close();
 
 // ---------- Shopping regression (no order submitted) ----------
 const shop = await browser.newContext({ viewport: { width: 1280, height: 900 } });

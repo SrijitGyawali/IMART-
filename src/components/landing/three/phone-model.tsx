@@ -9,8 +9,11 @@ import {
 } from "three";
 import { MODEL_URL, STILL_FILL } from "../config";
 import { FALLBACK_FINISH, type Finish } from "../data";
-import { scene as sceneState, setPhoneUv } from "../scene-store";
+import { filmBeats, filmPose, ramp } from "../film/film-timeline";
+import { film, scene as sceneState, setFilmLabel, setPhoneUv } from "../scene-store";
 import { createSharedWipe, createWipeColors, patchWipe, type SharedWipe, type WipeColors } from "./finish-wipe";
+import { applyLayers, buildLayers, disposeLayers, layerOffset, type LayerRig } from "./layers";
+import { createScreenUniforms, disposeScreen, patchScreen, type ScreenUniforms } from "./screen-ui";
 
 const ALUMINIUM = ["Anodized aluminum", "Metal tint"];
 const ANTENNA = ["Plastic antena"];
@@ -18,7 +21,6 @@ const BACK_GLASS = ["Frosted glass"];
 const ANTENNA_SHADE = 0.55;
 export const BASE_YAW = -0.32;
 export const BASE_PITCH = 0.04;
-const FILM_YAW = -0.1;
 
 useGLTF.preload(MODEL_URL, false, true);
 
@@ -30,6 +32,8 @@ interface Rig {
   antenna: WipeColors;
   glass: WipeColors;
   metals: MeshStandardMaterial[];
+  layers: LayerRig;
+  screen: ScreenUniforms;
   height: number;
   smoothed: { x: number; y: number };
   ready: boolean;
@@ -50,7 +54,7 @@ function materialsNamed(root: Group, names: string[]): MeshStandardMaterial[] {
 /**
  * Measures the model in its own space (independent of our wrapper groups, so re-running is safe):
  * the rotation that stands it upright with the screen facing +Z, its centre, its height and its
- * width range in that upright frame.
+ * width/height ranges in that upright frame.
  */
 function measure(model: Group) {
   model.updateMatrixWorld(true);
@@ -91,32 +95,28 @@ function measure(model: Group) {
     center,
     height: Math.max(size.x, size.y, size.z),
     width: [upright.min.x, upright.max.x] as const,
+    heightRange: [upright.min.y, upright.max.y] as const,
   };
 }
 
 let wallpaper: CanvasTexture | null = null;
 
-/** iMart's own idle screen: a soft emerald glow, centred so UV orientation doesn't matter. */
+/** Keeps an emissive map on the OLED so its UV varying exists; the screen shader draws the UI. */
 function getWallpaper(): CanvasTexture | null {
   if (wallpaper) return wallpaper;
   const canvas = document.createElement("canvas");
-  canvas.width = 512;
-  canvas.height = 1024;
+  canvas.width = 4;
+  canvas.height = 4;
   const ctx = canvas.getContext("2d");
   if (!ctx) return null;
-  const glow = ctx.createRadialGradient(256, 512, 16, 256, 512, 640);
-  glow.addColorStop(0, "#1f8a5b");
-  glow.addColorStop(0.32, "#0d3f29");
-  glow.addColorStop(0.68, "#04140d");
-  glow.addColorStop(1, "#010403");
-  ctx.fillStyle = glow;
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(0, 0, 4, 4);
   wallpaper = new CanvasTexture(canvas);
   wallpaper.colorSpace = SRGBColorSpace;
   return wallpaper;
 }
 
-function applyWallpaper(screens: MeshStandardMaterial[]) {
+function prepareScreen(screens: MeshStandardMaterial[], uniforms: ScreenUniforms) {
   const texture = getWallpaper();
   if (!texture) return;
   for (const m of screens) {
@@ -124,21 +124,24 @@ function applyWallpaper(screens: MeshStandardMaterial[]) {
     m.color.set("#000000");
     m.emissive.set("#ffffff");
     m.emissiveMap = texture;
-    m.emissiveIntensity = 0.85;
-    m.needsUpdate = true;
+    m.emissiveIntensity = 1;
+    patchScreen(m, uniforms);
   }
 }
 
 function buildRig(model: Group, orient: Group, centre: Group): Rig {
-  const { correction, center, height, width } = measure(model);
+  const { correction, center, height, width, heightRange } = measure(model);
   orient.quaternion.copy(correction);
   centre.position.copy(center).negate();
+  const screen = createScreenUniforms();
   const rig: Rig = {
-    shared: createSharedWipe(width[0], width[1]),
+    shared: createSharedWipe(width[0], width[1], heightRange[0], heightRange[1]),
     aluminium: createWipeColors(),
     antenna: createWipeColors(),
     glass: createWipeColors(),
     metals: materialsNamed(model, ALUMINIUM),
+    layers: buildLayers(model, correction, width[1] - width[0], heightRange[1] - heightRange[0]),
+    screen,
     height,
     smoothed: { x: 0, y: 0 },
     ready: false,
@@ -146,31 +149,37 @@ function buildRig(model: Group, orient: Group, centre: Group): Rig {
   for (const m of rig.metals) patchWipe(m, rig.shared, rig.aluminium);
   for (const m of materialsNamed(model, ANTENNA)) patchWipe(m, rig.shared, rig.antenna);
   for (const m of materialsNamed(model, BACK_GLASS)) patchWipe(m, rig.shared, rig.glass);
-  applyWallpaper(materialsNamed(model, ["OLED"]));
+  prepareScreen(materialsNamed(model, ["OLED"]), screen);
   return rig;
 }
 
 const projected = new Vector3();
+const scratch = new Vector3();
+const other = new Vector3();
 
 interface FrameInput {
   state: RootState;
   delta: number;
   place: Group;
   light: PointLight | null;
+  outline: PointLight | null;
   rig: Rig;
   tier: "high" | "mid";
   look: Look;
   capture: boolean;
 }
 
-function frame({ state, delta, place, light, rig, tier, look, capture }: FrameInput) {
+function frame({ state, delta, place, light, outline, rig, tier, look, capture }: FrameInput) {
   const { width: vw, height: vh } = state.viewport;
   const mobile = vw / vh < 0.9;
   const t = state.clock.elapsedTime;
   const k = capture ? 0 : sceneState.handoff;
-  const motion = capture ? 0 : 1;
+  const idle = capture ? 0 : 1 - k;
+  const fp = capture ? 0 : film.progress;
+  const pose = filmPose(fp);
+  const beats = filmBeats(fp);
 
-  // Placement: where the poster still sits (device slot), easing to centre during the hand-off.
+  // Placement: the device slot (where the poster still sits), easing into the film frame.
   let x = vw * 0.17;
   let y = 0;
   let h = vh * 0.72;
@@ -183,18 +192,31 @@ function frame({ state, delta, place, light, rig, tier, look, capture }: FrameIn
     y = (0.5 - slot.cy) * vh;
     h = slot.h * vh * STILL_FILL;
   }
-  x = MathUtils.lerp(x, 0, k);
-  y = MathUtils.lerp(y, 0, k);
-  h = MathUtils.lerp(h, vh * (mobile ? 0.5 : 0.78), k);
+  // Phones keep the device centred; the copy sits below it rather than beside it.
+  x = MathUtils.lerp(x, mobile ? 0 : pose.x * vw, k);
+  y = MathUtils.lerp(y, mobile ? vh * 0.17 : 0, k);
+  h = MathUtils.lerp(h, vh * (mobile ? 0.42 : 0.78), k) * MathUtils.lerp(1, pose.scale, k);
   place.scale.setScalar(h / rig.height);
 
   const sm = rig.smoothed;
   const follow = tier === "high" && !capture;
   sm.x = MathUtils.damp(sm.x, follow ? sceneState.pointer.x : 0, 2.5, delta);
   sm.y = MathUtils.damp(sm.y, follow ? sceneState.pointer.y : 0, 2.5, delta);
-  place.position.set(x, y + Math.sin(t * 0.35) * vh * 0.0025 * motion, 0);
-  place.rotation.y = MathUtils.lerp(BASE_YAW, FILM_YAW, k) + Math.sin(t * 0.21) * 0.012 * motion + sm.x * 0.05;
-  place.rotation.x = BASE_PITCH + Math.sin(t * 0.17) * 0.006 * motion + sm.y * 0.025;
+  place.position.set(x, y + Math.sin(t * 0.35) * vh * 0.0025 * idle, 0);
+  place.rotation.y = MathUtils.lerp(BASE_YAW, pose.yaw, k) + Math.sin(t * 0.21) * 0.012 * idle + sm.x * 0.05 * idle;
+  place.rotation.x = MathUtils.lerp(BASE_PITCH, pose.pitch, k) + Math.sin(t * 0.17) * 0.006 * idle + sm.y * 0.025 * idle;
+
+  // Layers open along the thickness axis; the internals appear once the shell opens or is scanned.
+  const gapSize = mobile ? 0.009 : 0.013;
+  applyLayers(rig.layers, beats.explode, gapSize);
+  rig.layers.internals.visible = beats.explode.some((e) => e > 0.002) || beats.scanFade > 0.01;
+
+  // Fly-through: centre the gap between the logic board and the frame.
+  if (pose.gap > 0) {
+    place.updateMatrixWorld();
+    scratch.set(0, 0, 0.5 * layerOffset(2, beats.explode, gapSize)).applyMatrix4(place.matrixWorld);
+    place.position.x -= (scratch.x - place.position.x) * pose.gap;
+  }
 
   // Finish wipe: old finish ahead of the band, new finish behind it.
   const from = capture ? look : (sceneState.wipe.from ?? look);
@@ -206,6 +228,8 @@ function frame({ state, delta, place, light, rig, tier, look, capture }: FrameIn
   rig.glass.uTo.value.set(look.glass);
   rig.shared.uWipe.value = capture ? 1.05 : sceneState.wipe.progress;
   rig.shared.uBand.value = capture ? 0 : sceneState.wipe.band;
+  rig.shared.uScan.value = beats.scan;
+  rig.shared.uScanFade.value = beats.scanFade;
   place.updateMatrixWorld();
   rig.shared.uPhoneInv.value.copy(place.matrixWorld).invert();
   const mix = MathUtils.clamp(rig.shared.uWipe.value, 0, 1);
@@ -214,9 +238,38 @@ function frame({ state, delta, place, light, rig, tier, look, capture }: FrameIn
     m.roughness = MathUtils.lerp(from.roughness, look.roughness, mix);
   }
 
-  // Boot reveal and the finish-change dip.
-  state.gl.toneMappingExposure = (capture ? 1 : sceneState.intro.exposure) * (1 - 0.3 * sceneState.dim);
+  // Screen story.
+  const sc = rig.screen;
+  sc.uPower.value = beats.power;
+  sc.uPayCard.value = beats.payCard;
+  sc.uPay.value = beats.pay;
+  sc.uQr.value = beats.qr;
+  sc.uQrCollapse.value = beats.qrCollapse;
+  sc.uMorph.value = beats.morph;
+  sc.uMap.value = beats.map;
+  sc.uNotify.value = beats.notify;
+  sc.uTime.value = t;
+  sc.uUi.value = beats.ui;
+
+  // Light: boot reveal, finish-change dip, the dark pass between layers.
+  state.gl.toneMappingExposure = (capture ? 1 : sceneState.intro.exposure) * (1 - 0.3 * sceneState.dim) * pose.exposure;
   if (light) light.intensity = capture ? 0 : sceneState.intro.light * 3;
+  if (outline) {
+    outline.intensity = beats.outline * 2.5;
+    const a = ramp(fp, 0.165, 0.205) * Math.PI * 2;
+    outline.position.set(Math.cos(a) * 0.045, Math.sin(a) * 0.085, -0.012);
+  }
+
+  // Leader-line anchors: whichever side edge of each layer is further right on screen, so labels
+  // read outward from the stack instead of across it; staggered vertically.
+  for (let i = 0; i < 5; i++) {
+    const z = layerOffset(i, beats.explode, gapSize);
+    const ay = 0.06 - i * 0.03;
+    scratch.set(0.042, ay, z).applyMatrix4(place.matrixWorld).project(state.camera);
+    other.set(-0.042, ay, z).applyMatrix4(place.matrixWorld).project(state.camera);
+    const edge = other.x > scratch.x ? other : scratch;
+    setFilmLabel(i, ((edge.x + 1) / 2) * state.size.width, ((1 - edge.y) / 2) * state.size.height, edge.z < 1);
+  }
 
   projected.copy(place.position).project(state.camera);
   setPhoneUv((projected.x + 1) / 2, (1 - projected.y) / 2);
@@ -238,18 +291,37 @@ export function PhoneModel({
   const orient = useRef<Group>(null);
   const centre = useRef<Group>(null);
   const light = useRef<PointLight>(null);
+  const outline = useRef<PointLight>(null);
   const rig = useRef<Rig | null>(null);
 
   useLayoutEffect(() => {
-    if (!orient.current || !centre.current) return;
-    rig.current = buildRig(model, orient.current, centre.current);
+    const p = place.current;
+    if (!p || !orient.current || !centre.current) return;
+    const built = buildRig(model, orient.current, centre.current);
+    p.add(built.layers.internals);
+    rig.current = built;
+    return () => {
+      p.remove(built.layers.internals);
+      disposeLayers(built.layers);
+      disposeScreen(built.screen);
+    };
   }, [model]);
 
   useFrame((state, delta) => {
     const r = rig.current;
     if (!place.current || !r) return;
     const look = captureFinish ?? sceneState.finish ?? initialFinish ?? FALLBACK_FINISH;
-    frame({ state, delta, place: place.current, light: light.current, rig: r, tier, look, capture: captureFinish !== null });
+    frame({
+      state,
+      delta,
+      place: place.current,
+      light: light.current,
+      outline: outline.current,
+      rig: r,
+      tier,
+      look,
+      capture: captureFinish !== null,
+    });
     if (!r.ready) {
       r.ready = true;
       onReady();
@@ -260,6 +332,8 @@ export function PhoneModel({
     <group ref={place}>
       {/* The green light from the boot dot, at the phone's front-left edge. */}
       <pointLight ref={light} color="#3ddc84" intensity={0} distance={0} decay={2} position={[-0.07, 0.05, 0.1]} />
+      {/* Travels around the outline of the device at the end of act 01. */}
+      <pointLight ref={outline} color="#cfffe4" intensity={0} distance={0} decay={2} />
       <group ref={orient}>
         <group ref={centre}>
           <primitive object={model} />

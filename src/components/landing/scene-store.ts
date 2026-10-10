@@ -114,3 +114,26 @@ export function isBootDone() {
   return bootDone;
 }
 export const subscribeBoot = boot.subscribe;
+
+export interface FilmLabel {
+  x: number;
+  y: number;
+  visible: boolean;
+}
+
+/** Film progress 0..1 and the projected anchors of the five layer labels (CSS px). */
+export const film = {
+  progress: 0,
+  labels: Array.from({ length: 5 }, (): FilmLabel => ({ x: 0, y: 0, visible: false })),
+};
+
+export function setFilmProgress(p: number) {
+  film.progress = p;
+}
+
+export function setFilmLabel(i: number, x: number, y: number, visible: boolean) {
+  const label = film.labels[i];
+  label.x = x;
+  label.y = y;
+  label.visible = visible;
+}

@@ -6,6 +6,7 @@ import { readCapture } from "./config";
 import { useTier } from "./motion/use-tier";
 import { acquireStringTune } from "./motion/string-tune";
 import { bindHeroHandoff, playHeroEntrance, playStudioSweep, whenPhoneReady } from "./motion/hero-motion";
+import { bindFilm } from "./motion/film";
 import {
   getSceneFinish, isBootDone, scene, setSceneFinish, setSceneSlot, setSceneVisible, subscribeBoot,
 } from "./scene-store";
@@ -150,6 +151,8 @@ export function LandingExperience({
     const unsubscribe = subscribeBoot(start);
     if (isBootDone()) start();
     if (!reduced) cleanups.push(bindHeroHandoff(root));
+    // The pinned film needs the live phone; Low tier keeps the stacked, server-rendered acts.
+    if (!reduced && tier !== "low") cleanups.push(bindFilm(root));
     return () => {
       unsubscribe();
       cleanups.forEach((cleanup) => cleanup());

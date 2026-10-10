@@ -41,21 +41,23 @@ export interface Pose {
   exposure: number;
   /** 0..1 — how much to centre the gap between the logic board and the frame (fly-through). */
   gap: number;
+  /** Horizontal offset as a share of the viewport width (act 02 sits right of its headline). */
+  x: number;
 }
 
 const KEYS: Array<[number, Pose]> = [
-  [0, { yaw: -0.1, pitch: 0.04, scale: 1, exposure: 1, gap: 0 }],
-  [0.08, { yaw: 0.9, pitch: 0.06, scale: 1, exposure: 1, gap: 0 }],
-  [0.15, { yaw: 2.75, pitch: 0.08, scale: 1.06, exposure: 1, gap: 0 }],
-  [0.21, { yaw: 2.85, pitch: 0.06, scale: 1.06, exposure: 1, gap: 0 }],
-  [0.27, { yaw: 2.85, pitch: 0.05, scale: 1, exposure: 1, gap: 0 }],
-  [0.35, { yaw: 2.15, pitch: 0.14, scale: 0.92, exposure: 1, gap: 0 }],
-  [0.41, { yaw: 1.62, pitch: 0.02, scale: 2.8, exposure: 0.35, gap: 1 }],
-  [0.45, { yaw: 1.45, pitch: 0, scale: 3.4, exposure: 0.12, gap: 1 }],
-  [0.5, { yaw: 0.45, pitch: 0.06, scale: 1, exposure: 1, gap: 0 }],
-  [0.58, { yaw: 0.22, pitch: 0.04, scale: 1, exposure: 1, gap: 0 }],
-  [0.645, { yaw: 0, pitch: 0, scale: 1.32, exposure: 1, gap: 0 }],
-  [1, { yaw: 0, pitch: 0, scale: 1.32, exposure: 1, gap: 0 }],
+  [0, { yaw: -0.1, pitch: 0.04, scale: 1, exposure: 1, gap: 0, x: 0 }],
+  [0.08, { yaw: 0.9, pitch: 0.06, scale: 1, exposure: 1, gap: 0, x: 0 }],
+  [0.15, { yaw: 2.75, pitch: 0.08, scale: 1.06, exposure: 1, gap: 0, x: 0 }],
+  [0.21, { yaw: 2.85, pitch: 0.06, scale: 1.06, exposure: 1, gap: 0, x: 0 }],
+  [0.27, { yaw: 2.85, pitch: 0.05, scale: 1, exposure: 1, gap: 0, x: 0.06 }],
+  [0.35, { yaw: 2.15, pitch: 0.14, scale: 0.92, exposure: 1, gap: 0, x: 0.13 }],
+  [0.41, { yaw: 1.62, pitch: 0.02, scale: 2.8, exposure: 0.35, gap: 1, x: 0 }],
+  [0.45, { yaw: 1.45, pitch: 0, scale: 3.4, exposure: 0.12, gap: 1, x: 0 }],
+  [0.5, { yaw: 0.45, pitch: 0.06, scale: 1, exposure: 1, gap: 0, x: 0.08 }],
+  [0.58, { yaw: 0.22, pitch: 0.04, scale: 1, exposure: 1, gap: 0, x: 0.04 }],
+  [0.645, { yaw: 0, pitch: 0, scale: 1.1, exposure: 1, gap: 0, x: 0 }],
+  [1, { yaw: 0, pitch: 0, scale: 1.1, exposure: 1, gap: 0, x: 0 }],
 ];
 
 export function filmPose(p: number): Pose {
@@ -72,6 +74,7 @@ export function filmPose(p: number): Pose {
     scale: mix(a.scale, b.scale),
     exposure: mix(a.exposure, b.exposure),
     gap: mix(a.gap, b.gap),
+    x: mix(a.x, b.x),
   };
 }
 
@@ -96,7 +99,7 @@ export function filmBeats(p: number) {
   return {
     explode,
     scan: ramp(p, 0.21, 0.27),
-    scanFade: window4(p, 0.205, 0.215, 0.3, 0.34),
+    scanFade: window4(p, 0.205, 0.215, 0.27, 0.295),
     sweep: sweepOn ? ramp(p, 0.1, 0.17) : -1,
     outline: window4(p, 0.165, 0.175, 0.19, 0.205),
     envLive: p >= 0.095 && p <= 0.175,
@@ -108,6 +111,7 @@ export function filmBeats(p: number) {
     morph: ramp(p, 0.71, 0.735) + ramp(p, 0.745, 0.77),
     map: ramp(p, 0.77, 0.83),
     notify: ramp(p, 0.85, 0.88),
+    ui: window4(p, 0.59, 0.61, 0.96, 0.99),
   };
 }
 
