@@ -134,6 +134,27 @@ for (const [f, act] of [[0.14, 1], [0.36, 2], [0.73, 3], [0.89, 4]]) {
 }
 check("no horizontal scroll inside the film (1440px)", await noHorizontalScroll(d));
 
+// The big transition (moment 05): the map's lines escape, white light floods, the lines become the store's guides.
+await scrollFilm(0.93);
+await d.waitForTimeout(1400);
+await d.screenshot({ path: `${OUT}/p4-escape-93.png` });
+await scrollFilm(0.97);
+await d.waitForTimeout(1400);
+const floodOpacity = await d.locator(".landing-flood").evaluate((el) => parseFloat(getComputedStyle(el).opacity));
+check("transition: white flood covers the stage", floodOpacity > 0.9, `opacity=${floodOpacity.toFixed(2)}`);
+const escape = await d.locator(".escape-lines").evaluate((el) => ({ shown: getComputedStyle(el).visibility === "visible", lines: el.querySelectorAll("line").length }));
+check("transition: escaping lines on screen", escape.shown && escape.lines === 9, JSON.stringify(escape));
+check("transition: header switches to its light look", (await attr(d, "data-flooded")) !== null);
+await d.screenshot({ path: `${OUT}/p4-flood-97.png` });
+await scrollFilm(0.995);
+await d.waitForTimeout(1600);
+const guide = await d.evaluate(() => ({
+  x1: parseFloat(document.querySelector(".escape-lines line").getAttribute("x1")),
+  tile: document.querySelector(".rail-tile").getBoundingClientRect().left,
+}));
+check("transition: lines land on the rail's edges", Math.abs(guide.x1 - guide.tile) < 2, `x1=${guide.x1} tile=${guide.tile.toFixed(1)}`);
+await d.screenshot({ path: `${OUT}/p4-guides-100.png` });
+
 // Anchor navigation must work with smooth scroll on (navbar/footer link to /#help).
 await d.locator('.store-footer a[href="/#help"]').first().click();
 await d.waitForTimeout(2500);
@@ -146,11 +167,51 @@ check("rail starts with iPhone", (await d.locator(".rail-tile .rail-label").firs
 await d.locator(".rail-tile").first().hover();
 await d.waitForTimeout(300);
 check("cursor shows View over products", (await d.locator(".cursor-label").textContent()) === "View");
+
+// The living store
+const opacities = (sel) => d.locator(sel).evaluateAll((els) => els.map((el) => parseFloat(getComputedStyle(el).opacity)));
+const reveal = async (sel, wait = 1600) => {
+  await d.locator(sel).first().evaluate((el) => el.scrollIntoView({ block: "center" }));
+  await d.waitForTimeout(wait);
+};
+await reveal(".rail-track");
+check("store: rail tiles enter", (await opacities(".rail-tile")).every((o) => o === 1), (await opacities(".rail-tile")).join(","));
+const tileBox = await d.locator(".rail-tile").first().boundingBox();
+await d.mouse.move(tileBox.x + tileBox.width * 0.9, tileBox.y + tileBox.height * 0.2);
+await d.waitForTimeout(250);
+const lean = await d.locator(".rail-tile").first().evaluate((el) => el.style.getPropertyValue("--rx"));
+check("store: rail tile leans toward the cursor", parseFloat(lean) > 0.5, `--rx=${lean}`);
+await d.screenshot({ path: `${OUT}/p4-rail.png` });
+await reveal(".showcase-grid");
+check("store: product cards enter", (await opacities(".showcase-grid .shop-product")).every((o) => o === 1));
 const tabs = d.locator(".showcase-tabs button");
 if ((await tabs.count()) > 1) {
+  await reveal(".showcase-tabs", 300);
   await tabs.nth(1).click();
+  await d.waitForTimeout(1200);
   check("showcase tab switches", (await tabs.nth(1).getAttribute("aria-pressed")) === "true");
+  const swapped = await opacities(".showcase-grid .shop-product");
+  check("store: swapped shelf fully visible", swapped.length > 0 && swapped.every((o) => o === 1), swapped.join(","));
+  await d.screenshot({ path: `${OUT}/p4-showcase.png` });
 }
+await reveal(".benefits");
+check("store: benefits drawn in", (await opacities(".benefit > span")).every((o) => o === 1));
+await reveal(".service-list", 2200);
+const nums = (await d.locator(".service-num").allTextContents()).join(" ");
+check("store: service numbers roll to 01 02 03", nums === "01 02 03", nums);
+check("store: service lines drawn", await d.locator(".service-list").evaluate((el) => el.classList.contains("is-in")));
+await reveal("#help", 600);
+const firstFaq = d.locator(".faq-list details").first();
+await firstFaq.locator("summary").click();
+await d.waitForTimeout(700);
+const opened = await firstFaq.evaluate((el) => ({ open: el.open, h: el.querySelector(".faq-answer").getBoundingClientRect().height }));
+check("store: FAQ opens smoothly", opened.open && opened.h > 20, JSON.stringify(opened));
+await d.screenshot({ path: `${OUT}/p4-faq.png` });
+await firstFaq.locator("summary").click();
+await d.waitForTimeout(700);
+check("store: FAQ closes", !(await firstFaq.evaluate((el) => el.open)));
+await reveal(".visit-body", 2200);
+check("store: visit pin drawn", (await opacities(".visit-pin-dot"))[0] === 1);
 
 // Leaving the landing turns smooth scroll off; coming back turns it on again.
 await d.locator(".showcase-grid .shop-product").first().click();
