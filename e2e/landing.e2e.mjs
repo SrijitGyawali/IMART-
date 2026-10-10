@@ -29,44 +29,87 @@ function watch(page, label) {
 }
 const landing = (page) => page.locator("main.landing");
 const attr = (page, name) => landing(page).getAttribute(name);
-const htmlScroll = (page) => page.evaluate(() => document.documentElement.dataset.scroll ?? null);
+const htmlAttr = (page, name) => page.evaluate((n) => document.documentElement.getAttribute(n), name);
+const htmlScroll = (page) => htmlAttr(page, "data-scroll");
 const headerBg = (page) => page.locator(".store-header").evaluate((el) => getComputedStyle(el).backgroundColor);
 const noHorizontalScroll = (page) => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1);
+const bootSettled = (page) => page.waitForFunction(() => document.documentElement.getAttribute("data-boot") !== "play", null, { timeout: 5000 });
+const entranceDone = (page) => page.waitForFunction(() => document.documentElement.getAttribute("data-entrance") === "done", null, { timeout: 6000 }).catch(() => {});
 
-// ---------- Desktop, high tier ----------
+// ---------- Server HTML: the landing header is dark from the first byte ----------
+const html = await (await fetch(BASE + "/")).text();
+check("SSR: header marked data-landing", /<header class="store-header" data-landing=""/.test(html));
+check("SSR: no topbar on the landing page", !html.includes("store-topbar"));
+check("SSR: boot gate script present", html.includes('data-boot'));
+
+// ---------- Desktop, high tier, first visit (boot plays) ----------
 const desk = await browser.newContext({ viewport: { width: 1440, height: 900 } });
 const d = await desk.newPage();
 watch(d, "desktop");
-await d.goto(BASE + "/", { waitUntil: "networkidle" });
+await d.goto(BASE + "/", { waitUntil: "domcontentloaded" });
+check("boot: plays on the first visit", (await htmlAttr(d, "data-boot")) === "play");
+await d.waitForTimeout(500);
+await d.screenshot({ path: `${OUT}/p2-boot-500ms.png` });
+const bootStart = Date.now();
+await bootSettled(d).catch(() => {});
+check("boot: finishes within the cap", (await htmlAttr(d, "data-boot")) === "done", `${Date.now() - bootStart + 500} ms`);
+check("boot: remembered for the session", (await d.evaluate(() => sessionStorage.getItem("imart-boot"))) === "1");
+await entranceDone(d);
+check("entrance: completes", (await htmlAttr(d, "data-entrance")) === "done");
+check("entrance: headline visible", (await d.locator(".hero-title").evaluate((el) => getComputedStyle(el).opacity)) === "1");
 
 check("hero headline", (await d.getByRole("heading", { level: 1 }).textContent())?.includes("Your next"));
 const price = (await d.locator(".hero-price strong").textContent().catch(() => null))?.trim() ?? null;
 check("hero shows a live price", /^Rs\. [\d,]+$/.test(price ?? ""), price ?? "none");
 const ctaHref = await d.locator(".hero-ctas .landing-cta").first().getAttribute("href");
 check("primary CTA links to the hero product", ctaHref?.startsWith("/products/") === true, ctaHref ?? "");
-const radios = d.getByRole("radio");
-const radioCount = await radios.count();
-check("finish picker offers finishes", radioCount >= 1, String(radioCount));
-if (radioCount > 1) {
-  await radios.nth(1).click();
-  check("picking a finish updates aria-checked", (await radios.nth(1).getAttribute("aria-checked")) === "true");
-}
+check("poster is a rendered still", (await d.locator(".hero-poster").getAttribute("src"))?.includes("renders%2Fhero-") === true);
 check("stage starts at hero", (await attr(d, "data-stage")) === "hero");
 check("tier is high on desktop", (await attr(d, "data-tier")) === "high");
 check("header is transparent over the dark stage", (await headerBg(d)) === "rgba(0, 0, 0, 0)", await headerBg(d));
-check("topbar hidden on the landing page", !(await d.locator(".store-topbar").isVisible()));
 await d.locator("main.landing[data-phone='ready']").waitFor({ timeout: 30000 }).catch(() => {});
 check("3D phone becomes ready", (await attr(d, "data-phone")) === "ready", await attr(d, "data-phone"));
 check("smooth scroll on desktop", (await htmlScroll(d)) === "smooth", String(await htmlScroll(d)));
 check("no horizontal scroll (1440px)", await noHorizontalScroll(d));
-await d.waitForTimeout(1200);
-await d.screenshot({ path: `${OUT}/p1-hero-desktop.png` });
+await d.waitForTimeout(1800);
+await d.screenshot({ path: `${OUT}/p2-hero-desktop.png` });
 
+// Finish change (moment 02)
+const radios = d.getByRole("radio");
+const radioCount = await radios.count();
+check("finish picker offers finishes", radioCount >= 1, String(radioCount));
+if (radioCount > 2) {
+  await radios.nth(2).click();
+  await d.waitForTimeout(250);
+  await d.screenshot({ path: `${OUT}/p2-finish-wipe-250ms.png` });
+  check("picking a finish updates aria-checked", (await radios.nth(2).getAttribute("aria-checked")) === "true");
+  check("poster follows the finish", (await d.locator(".hero-poster").getAttribute("src"))?.includes("silver") === true);
+}
+
+// Magnetic CTA
+const cta = d.locator(".hero-ctas .landing-cta").first();
+const box = await cta.boundingBox();
+if (box) {
+  await d.mouse.move(box.x + box.width / 2 + 40, box.y + box.height / 2, { steps: 4 });
+  await d.waitForTimeout(600);
+  const mx = await cta.evaluate((el) => parseFloat(getComputedStyle(el).getPropertyValue("--magnetic-x")) || 0);
+  check("magnetic CTA leans toward the pointer", mx > 0.5 && mx < 12, `--magnetic-x=${mx.toFixed(2)}`);
+}
+
+// Cursor
+check("cursor ring present on desktop", (await d.locator(".cursor-ring").count()) === 1);
+
+// Scroll hand-off
 await d.mouse.move(720, 450);
+await d.mouse.wheel(0, 450);
+await d.waitForTimeout(1600);
+const copyOpacity = await d.locator(".hero-copy").evaluate((el) => parseFloat(getComputedStyle(el).opacity));
+check("hand-off: headline recedes on scroll", copyOpacity < 0.9, `opacity=${copyOpacity.toFixed(2)}`);
+await d.screenshot({ path: `${OUT}/p2-handoff-desktop.png` });
+
 await d.mouse.wheel(0, 900);
 await d.waitForTimeout(1500);
-check("wheel scrolling moves the page", (await d.evaluate(() => window.scrollY)) > 300, String(await d.evaluate(() => window.scrollY)));
-await d.screenshot({ path: `${OUT}/p1-film-desktop.png` });
+check("wheel scrolling moves the page", (await d.evaluate(() => window.scrollY)) > 600, String(await d.evaluate(() => window.scrollY)));
 
 // Anchor navigation must work with smooth scroll on (navbar/footer link to /#help).
 await d.locator('.store-footer a[href="/#help"]').first().click();
@@ -77,27 +120,45 @@ check("stage becomes light in the store", (await attr(d, "data-stage")) === "lig
 check("header turns white in the store", (await headerBg(d)) === "rgb(255, 255, 255)", await headerBg(d));
 for (const id of ["services", "help", "visit"]) check(`section #${id} exists`, (await d.locator(`#${id}`).count()) === 1);
 check("rail starts with iPhone", (await d.locator(".rail-tile .rail-label").first().textContent())?.trim() === "iPhone");
+await d.locator(".rail-tile").first().hover();
+await d.waitForTimeout(300);
+check("cursor shows View over products", (await d.locator(".cursor-label").textContent()) === "View");
 const tabs = d.locator(".showcase-tabs button");
 if ((await tabs.count()) > 1) {
   await tabs.nth(1).click();
   check("showcase tab switches", (await tabs.nth(1).getAttribute("aria-pressed")) === "true");
 }
-await d.locator(".showcase").screenshot({ path: `${OUT}/p1-showcase-desktop.png` });
 
 // Leaving the landing turns smooth scroll off; coming back turns it on again.
 await d.locator(".showcase-grid .shop-product").first().click();
 await d.waitForURL(/\/products\//, { timeout: 15000 });
 await d.waitForTimeout(500);
 check("smooth scroll off after leaving the landing", (await htmlScroll(d)) === "native", String(await htmlScroll(d)));
+check("other pages keep the normal header", (await d.locator(".store-header[data-landing]").count()) === 0);
 await d.goBack({ waitUntil: "networkidle" });
 await d.waitForTimeout(800);
 check("smooth scroll back on after returning", (await htmlScroll(d)) === "smooth", String(await htmlScroll(d)));
+
+// Second visit in the same session: no boot.
+await d.goto(BASE + "/", { waitUntil: "domcontentloaded" });
+check("boot: skipped on the second visit", (await htmlAttr(d, "data-boot")) === "skip");
+
+// ---------- Skip the boot with a click ----------
+const skipCtx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+const k = await skipCtx.newPage();
+watch(k, "skip");
+await k.goto(BASE + "/", { waitUntil: "domcontentloaded" });
+await k.waitForTimeout(150);
+await k.mouse.click(200, 400);
+await k.waitForTimeout(400);
+check("boot: a click finishes it immediately", (await htmlAttr(k, "data-boot")) === "done");
 
 // ---------- Low tier (forced) ----------
 const low = await browser.newContext({ viewport: { width: 1440, height: 900 } });
 const l = await low.newPage();
 watch(l, "low");
 await l.goto(BASE + "/?tier=low", { waitUntil: "networkidle" });
+await bootSettled(l).catch(() => {});
 check("low tier: no 3D layer", (await l.locator(".phone-layer").count()) === 0);
 check("low tier: poster image visible", await l.locator(".hero-poster").isVisible());
 check("low tier: native scroll", (await htmlScroll(l)) === "native", String(await htmlScroll(l)));
@@ -107,6 +168,8 @@ const calm = await browser.newContext({ viewport: { width: 1440, height: 900 }, 
 const r = await calm.newPage();
 watch(r, "reduced-motion");
 await r.goto(BASE + "/", { waitUntil: "networkidle" });
+check("reduced motion: no boot", (await htmlAttr(r, "data-boot")) === "skip");
+check("reduced motion: content never hidden", (await htmlAttr(r, "data-entrance")) !== "pending");
 check("reduced motion: low tier", (await attr(r, "data-tier")) === "low");
 check("reduced motion: no 3D layer", (await r.locator(".phone-layer").count()) === 0);
 
@@ -115,19 +178,23 @@ const mob = await browser.newContext({ viewport: { width: 390, height: 844 }, is
 const m = await mob.newPage();
 watch(m, "mobile");
 await m.goto(BASE + "/", { waitUntil: "networkidle" });
+await bootSettled(m).catch(() => {});
 check("mobile: mid tier", (await attr(m, "data-tier")) === "mid", String(await attr(m, "data-tier")));
 check("mobile: native scroll", (await htmlScroll(m)) === "native", String(await htmlScroll(m)));
+check("mobile: no cursor ring", (await m.locator(".cursor-ring").count()) === 0);
 check("mobile: no horizontal scroll", await noHorizontalScroll(m), String(await m.evaluate(() => document.documentElement.scrollWidth)));
 await m.locator("main.landing[data-phone='ready']").waitFor({ timeout: 30000 }).catch(() => {});
 check("mobile: 3D phone becomes ready", (await attr(m, "data-phone")) === "ready", await attr(m, "data-phone"));
+await entranceDone(m);
 await m.waitForTimeout(1200);
-await m.screenshot({ path: `${OUT}/p1-hero-mobile.png` });
+await m.screenshot({ path: `${OUT}/p2-hero-mobile.png` });
 
 // ---------- Shopping regression (no order submitted) ----------
 const shop = await browser.newContext({ viewport: { width: 1280, height: 900 } });
 const s = await shop.newPage();
 watch(s, "shop");
 await s.goto(BASE + "/products/apple-iphone-17-pro", { waitUntil: "networkidle" });
+check("product page keeps the topbar", await s.locator(".store-topbar").isVisible());
 await s.getByRole("button", { name: "Add to Cart" }).click();
 check("cart: bag count updates", (await s.locator(".cart-count").textContent())?.trim() === "1");
 await s.goto(BASE + "/checkout", { waitUntil: "networkidle" });
