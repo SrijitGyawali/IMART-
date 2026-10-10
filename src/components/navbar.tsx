@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { useCart } from "@/components/cart-provider";
 import type { Category } from "@/lib/types";
@@ -11,11 +12,13 @@ export function Navbar({ categories }: { categories: Category[] }) {
   const { count, hydrated } = useCart();
   const [menuOpen, setMenuOpen] = useState(false);
   const whatsapp = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER ?? "";
+  // On the landing page the header starts dark over the stage — decided during SSR, so no flash.
+  const onLanding = usePathname() === "/";
 
   return (
     <>
-      <div className="store-topbar"><div className="store-container"><span>Your neighbourhood tech store. Now online.</span><div><Link href="/#visit">Amarpath, Butwal</Link><span className="topbar-divider" /><Link href="/#help">Shopping help</Link></div></div></div>
-      <header className="store-header">
+      {!onLanding && <div className="store-topbar"><div className="store-container"><span>Your neighbourhood tech store. Now online.</span><div><Link href="/#visit">Amarpath, Butwal</Link><span className="topbar-divider" /><Link href="/#help">Shopping help</Link></div></div></div>}
+      <header className="store-header" data-landing={onLanding ? "" : undefined}>
         <div className="store-container store-header-main">
           <Link href="/" className="store-logo" aria-label="iMart home">i<span>Mart</span><i /></Link>
           <StoreSearch />

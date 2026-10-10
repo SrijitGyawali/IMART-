@@ -9,7 +9,8 @@
     "lint": "eslint",
     "test": "node --test \"src/**/*.test.ts\"",
     "e2e": "node e2e/landing.e2e.mjs",
-    "model:build": "node scripts/build-phone-model.mjs"
+    "model:build": "node scripts/build-phone-model.mjs",
+    "stills:render": "node scripts/render-stills.mjs"
   },
   "dependencies": {
     "@fiddle-digital/string-tune": "1.2.6",

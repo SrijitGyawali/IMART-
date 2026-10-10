@@ -6,7 +6,7 @@ import { StoreIcon } from "./store-icon";
 
 export function ProductCard({ product }: { product: Product }) {
   return (
-    <Link href={"/products/" + product.slug} className="shop-product">
+    <Link href={"/products/" + product.slug} className="shop-product" data-cursor="view">
       <div className="shop-product-image">
         {product.images[0] ? <Image src={product.images[0]} alt={product.name} fill sizes="(max-width: 600px) 45vw, (max-width: 1000px) 30vw, 250px" className="object-contain" /> : <span className="product-placeholder"><StoreIcon name="bag" width={44} height={44} /></span>}
         {product.featured && <span className="product-badge">Featured</span>}

@@ -9,6 +9,7 @@ import { PromoPanels } from "@/components/landing/store/promo-panels";
 import { Services } from "@/components/landing/store/services";
 import { Faq } from "@/components/landing/store/faq";
 import { VisitIMart } from "@/components/landing/store/visit-imart";
+import { BootIntro } from "@/components/landing/intro/boot-intro";
 import {
   buildHero, buildPromos, buildRail, buildShelves, pickHeroProduct, toPublicProduct,
 } from "@/components/landing/data";
@@ -24,6 +25,7 @@ export default async function HomePage() {
 
   return (
     <LandingExperience initialFinish={hero?.finishes[0] ?? null}>
+      <BootIntro />
       <div className="landing-dark">
         <HeroStage hero={hero} whatsapp={whatsapp} />
         <ProductFilm />

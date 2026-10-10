@@ -23,35 +23,109 @@
 .landing-label-signal { color: var(--signal); }
 .landing-label-brand { color: var(--brand); }
 
-/* ---------- Header on the landing page (server-correct via :has) ---------- */
-.storefront:has(.landing[data-active]) .store-topbar { display: none; }
-.storefront:has(.landing[data-active]) .store-header {
+/* ---------- Header on the landing page ----------
+   The navbar marks itself data-landing on "/" during SSR, so the dark header is right before the
+   landing markup is parsed (no flash). :has() only follows the scroll stage. */
+.store-header[data-landing] {
   position: fixed;
   inset: 0 0 auto;
   transition: background-color .5s cubic-bezier(.16, 1, .3, 1), border-color .5s, color .5s;
 }
-.storefront:has(.landing[data-active]) :is(.store-navigation, .store-search, .header-help) {
+.store-header[data-landing] :is(.store-navigation, .store-search, .header-help) {
   transition: opacity .4s cubic-bezier(.16, 1, .3, 1), visibility .4s;
 }
-.storefront:has(.landing[data-active]:not([data-stage="light"])) .store-header {
-  background: transparent;
-  border-bottom-color: transparent;
-  color: #eef3ef;
+.storefront:not(:has(.landing[data-stage="light"])) .store-header[data-landing] { background: transparent; border-bottom-color: transparent; color: #eef3ef; }
+/* A soft scrim under the see-through header so content scrolling beneath never fights the logo. */
+.store-header[data-landing]::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 -40px;
+  z-index: -1;
+  background: linear-gradient(rgba(5, 7, 6, .82), rgba(5, 7, 6, .5) 60%, rgba(5, 7, 6, 0));
+  pointer-events: none;
+  transition: opacity .5s cubic-bezier(.16, 1, .3, 1);
 }
-.storefront:has(.landing[data-active]:not([data-stage="light"])) :is(.store-logo, .store-navigation a, .header-cart, .header-help, .mobile-menu-toggle) { color: #eef3ef; }
-.storefront:has(.landing[data-active]:not([data-stage="light"])) .store-logo > span { color: #3ddc84; }
-.storefront:has(.landing[data-active]:not([data-stage="light"])) .header-help small { color: rgba(238, 243, 239, .6); }
-.storefront:has(.landing[data-active]:not([data-stage="light"])) .store-navigation { border-top-color: rgba(255, 255, 255, .08); }
-.storefront:has(.landing[data-active]:not([data-stage="light"])) .store-navigation .browse-all { border-right-color: rgba(255, 255, 255, .14); }
-.storefront:has(.landing[data-active]:not([data-stage="light"])) .store-navigation .nav-visit { color: #3ddc84; }
-.storefront:has(.landing[data-active]:not([data-stage="light"])) .store-search { background: rgba(255, 255, 255, .06); border-color: rgba(255, 255, 255, .14); }
-.storefront:has(.landing[data-active]:not([data-stage="light"])) .store-search input { color: #eef3ef; }
-.storefront:has(.landing[data-active]:not([data-stage="light"])) .store-search input::placeholder { color: rgba(238, 243, 239, .55); }
+.storefront:has(.landing[data-stage="light"]) .store-header[data-landing]::before { opacity: 0; }
+.storefront:not(:has(.landing[data-stage="light"])) .store-header[data-landing] :is(.store-logo, .store-navigation a, .header-cart, .header-help, .mobile-menu-toggle) { color: #eef3ef; }
+.storefront:not(:has(.landing[data-stage="light"])) .store-header[data-landing] .store-logo > span { color: #3ddc84; }
+.storefront:not(:has(.landing[data-stage="light"])) .store-header[data-landing] .header-help small { color: rgba(238, 243, 239, .6); }
+.storefront:not(:has(.landing[data-stage="light"])) .store-header[data-landing] .store-navigation { border-top-color: rgba(255, 255, 255, .08); }
+.storefront:not(:has(.landing[data-stage="light"])) .store-header[data-landing] .store-navigation .browse-all { border-right-color: rgba(255, 255, 255, .14); }
+.storefront:not(:has(.landing[data-stage="light"])) .store-header[data-landing] .store-navigation .nav-visit { color: #3ddc84; }
+.storefront:not(:has(.landing[data-stage="light"])) .store-header[data-landing] .store-search { background: rgba(255, 255, 255, .06); border-color: rgba(255, 255, 255, .14); }
+.storefront:not(:has(.landing[data-stage="light"])) .store-header[data-landing] .store-search input { color: #eef3ef; }
+.storefront:not(:has(.landing[data-stage="light"])) .store-header[data-landing] .store-search input::placeholder { color: rgba(238, 243, 239, .55); }
 /* During the film the navigation simplifies to logo + bag. */
-.storefront:has(.landing[data-active][data-stage="film"]) :is(.store-navigation:not(.is-open), .store-search, .header-help) {
+.storefront:has(.landing[data-stage="film"]) .store-header[data-landing] :is(.store-navigation:not(.is-open), .store-search, .header-help) {
   opacity: 0;
   visibility: hidden;
 }
+
+/* ---------- Boot (moment 01) ---------- */
+.boot { display: none; position: fixed; inset: 0; z-index: 90; pointer-events: none; }
+html[data-boot="play"] .boot { display: block; }
+.boot-curtain {
+  --r: 0;
+  --bx: 50%;
+  --by: 50%;
+  position: absolute;
+  inset: 0;
+  background: #030504;
+  -webkit-mask-image: radial-gradient(circle at var(--bx) var(--by), transparent calc(var(--r) * 1px), #000 calc(var(--r) * 1px + 18vmax));
+  mask-image: radial-gradient(circle at var(--bx) var(--by), transparent calc(var(--r) * 1px), #000 calc(var(--r) * 1px + 18vmax));
+}
+.boot-glow { position: absolute; left: 50%; top: 50%; width: 70vmax; height: 70vmax; translate: -50% -50%; border-radius: 50%; background: radial-gradient(circle, rgba(61, 220, 132, .5), rgba(61, 220, 132, 0) 60%); opacity: 0; }
+.boot-logo { position: absolute; left: 50%; top: 50%; translate: -50% -50%; display: flex; align-items: baseline; font-size: clamp(56px, 9vw, 120px); font-weight: 600; letter-spacing: -.06em; color: #eef3ef; perspective: 600px; }
+.boot-letter { display: inline-block; opacity: 0; }
+.boot-letter:not(:first-child) { color: #3ddc84; }
+.boot-dot { display: inline-block; width: .14em; height: .14em; margin-left: .05em; border-radius: 50%; background: #3ddc84; opacity: 0; }
+.boot-signal { position: absolute; left: 50%; top: 50%; width: 8px; height: 8px; margin: -4px 0 0 -4px; border-radius: 4px; background: #3ddc84; box-shadow: 0 0 16px #3ddc84; opacity: 0; }
+
+/* ---------- Hero entrance (pre-paint state set by the boot gate; 3 s safety reveal without JS) ---------- */
+html[data-entrance="pending"] .hero-copy > * { opacity: 0; animation: landing-reveal-fallback 0s linear 3s forwards; }
+@keyframes landing-reveal-fallback { to { opacity: 1; } }
+
+/* ---------- Depth planes (pointer, desktop high tier) ----------
+   GSAP folds CSS `translate` into its own transforms on elements it tweens (.hero-word, .hero-copy),
+   so depth offsets live on children GSAP never touches. */
+.hero-word-inner { display: block; translate: calc(var(--px, 0) * -6px) calc(var(--py, 0) * -4px); }
+.hero-copy { transform-origin: left center; }
+.hero-copy > * { translate: calc(var(--px, 0) * 2px) calc(var(--py, 0) * 2px); }
+.hero-device-slot { touch-action: pan-y; }
+
+/* ---------- Magnetic CTAs (StringTune writes --magnetic-x/y in px) ---------- */
+.landing-cta[data-string="magnetic"] { translate: calc(var(--magnetic-x, 0) * 1px) calc(var(--magnetic-y, 0) * 1px); }
+.landing-cta[data-string="magnetic"] .cta-arrow { display: inline-flex; translate: calc(var(--magnetic-x, 0) * .6px) calc(var(--magnetic-y, 0) * .6px); }
+
+/* ---------- Precision cursor ---------- */
+.cursor-ring {
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 85;
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  margin: -12px 0 0 -12px;
+  border: 1px solid rgba(238, 243, 239, .6);
+  border-radius: 999px;
+  pointer-events: none;
+  opacity: 0;
+  transition: width .18s var(--ease-ui), height .18s var(--ease-ui), margin .18s var(--ease-ui), opacity .2s, background-color .18s, border-color .3s;
+}
+.cursor-ring[data-visible] { opacity: 1; }
+.cursor-ring[data-state="link"] { width: 34px; height: 34px; margin: -17px 0 0 -17px; }
+.cursor-ring[data-state="label"] { width: 64px; height: 64px; margin: -32px 0 0 -32px; background: #eef3ef; border-color: #eef3ef; }
+.cursor-label { font-size: 9px; font-weight: 600; letter-spacing: .14em; text-transform: uppercase; white-space: nowrap; color: #050706; opacity: 0; transition: opacity .15s; }
+.cursor-ring[data-state="label"] .cursor-label { opacity: 1; }
+.landing[data-stage="light"] .cursor-ring { border-color: rgba(17, 22, 19, .45); }
+.landing[data-stage="light"] .cursor-ring[data-state="label"] { background: #111613; border-color: #111613; }
+.landing[data-stage="light"] .cursor-label { color: #fff; }
+
+/* ---------- Capture mode (stills script): only the canvas matters ---------- */
+.landing[data-capture] > :not(.phone-layer) { visibility: hidden; }
+.landing[data-capture] .phone-layer { opacity: 1; }
 
 /* ---------- Dark stage ----------
    Paint order: .landing-dark background (in flow, static) → hero word (z 0)
@@ -101,7 +175,8 @@
   letter-spacing: -.06em;
   line-height: .8;
   text-transform: uppercase;
-  color: rgba(255, 255, 255, .028);
+  opacity: .56;
+  color: rgba(255, 255, 255, .05);
   pointer-events: none;
   user-select: none;
 }
@@ -273,9 +348,9 @@
 @media (max-width: 760px) {
   .landing { --header-h: 119px; }
   .landing-container { width: calc(100% - 32px); }
-  .landing-hero { align-items: start; padding: calc(var(--header-h) + 50vh) 0 96px; }
+  .landing-hero { align-items: start; padding: calc(var(--header-h) + 56vh) 0 96px; }
   .hero-grid { grid-template-columns: 1fr; }
-  .hero-device-slot { position: absolute; top: var(--header-h); left: 0; right: 0; height: 48vh; }
+  .hero-device-slot { position: absolute; top: var(--header-h); left: 0; right: 0; height: 54vh; }
   .hero-word { align-items: flex-start; padding: calc(var(--header-h) + 16vh) 0 0; font-size: 44vw; }
   .hero-title { margin-top: 14px; }
   .hero-line-2 { margin-top: 10px; }
@@ -300,7 +375,7 @@
   .faq { grid-template-columns: 1fr; gap: 24px; padding-block: 48px 64px; }
   .visit-body { grid-template-columns: 1fr; gap: 24px; padding-top: 40px; }
   .visit-pin { width: 88px; height: 88px; }
-  .storefront:has(.landing[data-active]:not([data-stage="light"])) .store-navigation.is-open {
+  .storefront:not(:has(.landing[data-stage="light"])) .store-header[data-landing] .store-navigation.is-open {
     background: rgba(5, 7, 6, .94);
     backdrop-filter: blur(12px);
   }

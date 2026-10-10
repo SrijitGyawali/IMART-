@@ -15,7 +15,7 @@ export function CategoryRail({ items }: { items: RailItem[] }) {
       </div>
       <div className="rail-track">
         {items.map((item) => (
-          <Link key={item.key} href={item.href} className="rail-tile">
+          <Link key={item.key} href={item.href} className="rail-tile" data-cursor="view">
             <span className="rail-image">
               {item.image ? (
                 <Image src={item.image} alt="" fill sizes="(max-width: 760px) 45vw, 260px" />

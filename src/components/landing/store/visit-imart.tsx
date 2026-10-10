@@ -24,11 +24,11 @@ export function VisitIMart({ whatsapp }: { whatsapp: string }) {
           <p>Amarpath, Butwal, Rupandehi · Sunday to Friday 9am–8pm · Saturday 10am–6pm</p>
         </div>
         <div className="visit-actions">
-          <a className="landing-cta" href="https://maps.google.com/?q=Amarpath,Butwal" target="_blank" rel="noopener noreferrer">
+          <a className="landing-cta" href="https://maps.google.com/?q=Amarpath,Butwal" target="_blank" rel="noopener noreferrer" data-cursor="map" data-string="magnetic" data-string-strength="0.12" data-string-radius="150">
             Find our store <span aria-hidden="true">↗</span>
           </a>
           {whatsapp && (
-            <a className="store-text-link" href={`https://wa.me/977${whatsapp}`} target="_blank" rel="noopener noreferrer">
+            <a className="store-text-link" href={`https://wa.me/977${whatsapp}`} target="_blank" rel="noopener noreferrer" data-cursor="chat">
               Chat on WhatsApp <StoreIcon name="arrow" width={16} />
             </a>
           )}
