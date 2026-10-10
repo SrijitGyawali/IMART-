@@ -1,14 +1,15 @@
 import Link from "next/link";
-import { getBrands, getCategories, getSuppliers } from "@/lib/queries";
+import { getAdminProductOptions, getBrands, getCategories, getSuppliers } from "@/lib/queries";
 import { ProductForm } from "../product-form";
 
 export const dynamic = "force-dynamic";
 
 export default async function NewProductPage() {
-  const [categories, brands, suppliers] = await Promise.all([
+  const [categories, brands, suppliers, allProducts] = await Promise.all([
     getCategories(),
     getBrands(),
     getSuppliers(),
+    getAdminProductOptions(),
   ]);
 
   return (
@@ -19,7 +20,13 @@ export default async function NewProductPage() {
       <h1 className="mb-8 mt-4 text-2xl font-semibold tracking-tight">
         New product
       </h1>
-      <ProductForm product={null} categories={categories} brands={brands} suppliers={suppliers} />
+      <ProductForm
+        product={null}
+        categories={categories}
+        brands={brands}
+        suppliers={suppliers}
+        allProducts={allProducts}
+      />
     </main>
   );
 }

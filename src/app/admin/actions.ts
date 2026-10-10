@@ -3,7 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
-import { productSchema, supplierSchema } from "@/lib/validation";
+import { productSchema, supplierSchema, brandSchema } from "@/lib/validation";
+import { randomUUID } from "crypto";
 
 async function requireUser() {
   const supabase = await createClient();
@@ -68,6 +69,7 @@ export async function saveProduct(
     supplier_id: formData.get("supplier_id") ?? "",
     warranty_months: formData.get("warranty_months") || 0,
     imei_tracked: formData.get("imei_tracked") === "on",
+    variant_of: formData.get("variant_of") ?? "",
   });
 
   if (!parsed.success) {
@@ -75,6 +77,27 @@ export async function saveProduct(
       ok: false,
       error: parsed.error.issues[0]?.message ?? "Invalid product data",
     };
+  }
+
+  // Linking to another product as a colour/storage variant: reuse its
+  // group id (creating one on it first if it doesn't have one yet).
+  let productGroupId: string | null = null;
+  if (parsed.data.variant_of) {
+    const { data: target } = await service
+      .from("products")
+      .select("id, product_group_id")
+      .eq("id", parsed.data.variant_of)
+      .single();
+
+    if (target) {
+      productGroupId = target.product_group_id ?? randomUUID();
+      if (!target.product_group_id) {
+        await service
+          .from("products")
+          .update({ product_group_id: productGroupId })
+          .eq("id", target.id);
+      }
+    }
   }
 
   // Images kept from before (edit mode) + newly uploaded files
@@ -132,6 +155,9 @@ export async function saveProduct(
     supplier_id: parsed.data.supplier_id || null,
     warranty_months: parsed.data.warranty_months,
     imei_tracked: parsed.data.imei_tracked,
+    // Only touched when linking to another product — omitted otherwise so
+    // editing an already-grouped product doesn't wipe its group membership.
+    ...(productGroupId ? { product_group_id: productGroupId } : {}),
   };
 
   const { error } = productId
@@ -207,6 +233,53 @@ export async function saveSupplier(
   if (error) return { ok: false, error: error.message };
 
   revalidatePath("/admin/suppliers");
+  return { ok: true };
+}
+
+export async function saveBrand(
+  brandId: string | null,
+  formData: FormData
+): Promise<SaveResult> {
+  const supabase = await requireUser();
+
+  const parsed = brandSchema.safeParse({
+    name: formData.get("name"),
+    slug: formData.get("slug"),
+  });
+
+  if (!parsed.success) {
+    return {
+      ok: false,
+      error: parsed.error.issues[0]?.message ?? "Invalid brand data",
+    };
+  }
+
+  const { error } = brandId
+    ? await supabase.from("brands").update(parsed.data).eq("id", brandId)
+    : await supabase.from("brands").insert(parsed.data);
+
+  if (error) {
+    if (error.code === "23505") {
+      return { ok: false, error: "That slug is already in use" };
+    }
+    return { ok: false, error: error.message };
+  }
+
+  revalidatePath("/admin/brands");
+  revalidatePath("/admin/products");
+  revalidatePath("/products");
+  return { ok: true };
+}
+
+export async function deleteBrand(brandId: string): Promise<SaveResult> {
+  const supabase = await requireUser();
+
+  const { error } = await supabase.from("brands").delete().eq("id", brandId);
+  if (error) return { ok: false, error: error.message };
+
+  revalidatePath("/admin/brands");
+  revalidatePath("/admin/products");
+  revalidatePath("/products");
   return { ok: true };
 }
 

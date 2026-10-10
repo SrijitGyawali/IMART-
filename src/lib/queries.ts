@@ -31,19 +31,93 @@ export async function getFeaturedProducts(): Promise<Product[]> {
   return data ?? [];
 }
 
-export async function getProducts(categorySlug?: string): Promise<Product[]> {
+export interface ProductFilters {
+  categorySlug?: string;
+  brandSlug?: string;
+  search?: string;
+  sort?: string;
+  inStock?: boolean;
+}
+
+export async function getProducts(
+  filtersOrCategorySlug?: string | ProductFilters
+): Promise<Product[]> {
   const supabase = await createClient();
+  const filters: ProductFilters =
+    typeof filtersOrCategorySlug === "string"
+      ? { categorySlug: filtersOrCategorySlug }
+      : (filtersOrCategorySlug ?? {});
+
+  // !inner is required for the dot-notation filter below to actually
+  // constrain rows — but only request it for a relation we're filtering
+  // on, otherwise products with no brand/category would be excluded
+  // from every unfiltered listing.
+  const categoryJoin = filters.categorySlug ? "categories!inner(slug)" : "";
+  const brandJoin = filters.brandSlug ? "brands!inner(slug)" : "";
+  const select = ["*", categoryJoin, brandJoin].filter(Boolean).join(", ");
+
   let query = supabase
     .from("products")
-    .select("*, categories!inner(slug)")
-    .eq("active", true)
-    .order("created_at", { ascending: false });
+    .select(select)
+    .eq("active", true);
 
-  if (categorySlug) {
-    query = query.eq("categories.slug", categorySlug);
+  if (filters.sort === "price-low") query = query.order("price", { ascending: true });
+  else if (filters.sort === "price-high") query = query.order("price", { ascending: false });
+  else if (filters.sort === "name") query = query.order("name");
+  else query = query.order("created_at", { ascending: false });
+  if (filters.inStock) query = query.gt("stock", 0);
+
+  if (filters.categorySlug) {
+    query = query.eq("categories.slug", filters.categorySlug);
+  }
+  if (filters.brandSlug) {
+    query = query.eq("brands.slug", filters.brandSlug);
+  }
+  if (filters.search) {
+    const term = filters.search.trim().slice(0, 80);
+    if (term) {
+      // Quote the entire filter value so punctuation stays literal rather
+      // than becoming PostgREST syntax. Escape ILIKE wildcard characters.
+      const pattern = JSON.stringify(`%${term.replace(/[%_\\]/g, "\\$&")}%`);
+      query = query.or(
+        `name.ilike.${pattern},model.ilike.${pattern},description.ilike.${pattern}`
+      );
+    }
   }
 
   const { data } = await query;
+  return (data ?? []) as unknown as Product[];
+}
+
+/** Sibling products sharing the same colour/storage variant group. */
+export async function getProductGroupSiblings(
+  groupId: string,
+  excludeId?: string
+): Promise<Product[]> {
+  const supabase = await createClient();
+  let query = supabase
+    .from("products")
+    .select("*")
+    .eq("product_group_id", groupId)
+    .eq("active", true)
+    .order("price");
+
+  if (excludeId) query = query.neq("id", excludeId);
+
+  const { data } = await query;
+  return data ?? [];
+}
+
+/** Lightweight product list for the admin "link as variant" picker. */
+export async function getAdminProductOptions(): Promise<
+  Pick<Product, "id" | "name" | "color" | "storage">[]
+> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("products")
+    .select("id, name, color, storage")
+    .order("name")
+    .limit(500);
   return data ?? [];
 }
 

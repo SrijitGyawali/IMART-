@@ -21,11 +21,13 @@ export function ProductForm({
   categories,
   brands,
   suppliers,
+  allProducts,
 }: {
   product: Product | null;
   categories: Category[];
   brands: Brand[];
   suppliers: Supplier[];
+  allProducts: Pick<Product, "id" | "name" | "color" | "storage">[];
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -333,6 +335,36 @@ export function ProductForm({
         />
         Track by IMEI (each unit sold individually — e.g. phones)
       </label>
+
+      <div>
+        <label htmlFor="variant_of" className="mb-1.5 block text-sm">
+          Link as a colour/storage variant of
+        </label>
+        <select id="variant_of" name="variant_of" defaultValue="" className={inputClass}>
+          <option value="">— Not a variant —</option>
+          {allProducts
+            .filter((p) => p.id !== product?.id)
+            .map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.name}
+                {p.color || p.storage
+                  ? ` (${[p.color, p.storage].filter(Boolean).join(", ")})`
+                  : ""}
+              </option>
+            ))}
+        </select>
+        <p className="mt-1 text-xs text-muted">
+          Pick the product this is the same item in a different colour or
+          storage of. The store will show a colour/size switcher on the
+          product page.
+          {product?.product_group_id && (
+            <span className="block">
+              This product is already linked to a variant group — only set
+              this if you want to link it somewhere else.
+            </span>
+          )}
+        </p>
+      </div>
 
       <div>
         <label htmlFor="description" className="mb-1.5 block text-sm">

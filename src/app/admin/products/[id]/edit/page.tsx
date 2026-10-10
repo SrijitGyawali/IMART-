@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { getBrands, getCategories, getSuppliers } from "@/lib/queries";
+import { getAdminProductOptions, getBrands, getCategories, getSuppliers } from "@/lib/queries";
 import type { Product } from "@/lib/types";
 import { ProductForm } from "../../product-form";
 
@@ -15,11 +15,12 @@ export default async function EditProductPage({
   const { id } = await params;
   const supabase = await createClient();
 
-  const [{ data }, categories, brands, suppliers] = await Promise.all([
+  const [{ data }, categories, brands, suppliers, allProducts] = await Promise.all([
     supabase.from("products").select("*").eq("id", id).single(),
     getCategories(),
     getBrands(),
     getSuppliers(),
+    getAdminProductOptions(),
   ]);
   const product = data as Product | null;
 
@@ -33,7 +34,13 @@ export default async function EditProductPage({
       <h1 className="mb-8 mt-4 text-2xl font-semibold tracking-tight">
         Edit product
       </h1>
-      <ProductForm product={product} categories={categories} brands={brands} suppliers={suppliers} />
+      <ProductForm
+        product={product}
+        categories={categories}
+        brands={brands}
+        suppliers={suppliers}
+        allProducts={allProducts}
+      />
     </main>
   );
 }

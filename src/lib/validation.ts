@@ -55,6 +55,7 @@ export const productSchema = z.object({
   supplier_id: z.string().uuid().optional().or(z.literal("")),
   warranty_months: z.coerce.number().int().min(0).optional().default(0),
   imei_tracked: z.coerce.boolean().optional().default(false),
+  variant_of: z.string().uuid().optional().or(z.literal("")),
 });
 
 export type ProductInput = z.infer<typeof productSchema>;
@@ -108,3 +109,13 @@ export const supplierSchema = z.object({
 });
 
 export type SupplierInput = z.infer<typeof supplierSchema>;
+
+export const brandSchema = z.object({
+  name: z.string().min(1, "Name is required"),
+  slug: z
+    .string()
+    .min(1, "Slug is required")
+    .regex(/^[a-z0-9-]+$/, "Slug must be lowercase letters, numbers, and hyphens only"),
+});
+
+export type BrandInput = z.infer<typeof brandSchema>;

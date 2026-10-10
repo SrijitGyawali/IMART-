@@ -11,6 +11,7 @@ migration runner wired up yet, so this is manual for now.
 | 3 | `03_erp_schema.sql` | Brands, suppliers, customers, staff roles, sales/repairs/purchases/expenses schema, inventory audit log |
 | 4 | `04_pos.sql` | `sale_items.cost_price` + the `create_sale()` RPC used by the POS |
 | 5 | `05_fix_order_stock.sql` | Makes storefront checkout decrement stock and block overselling (POS already did this from file 4) |
+| 6 | `06_variants_brands.sql` | `products.product_group_id` for colour/storage variants, extra brands + Speakers category, public read access to `brands` for the storefront brand filter |
 
 After running file 3, insert your admin user into `staff_profiles` — see the
 comment at the bottom of that file for the exact statement (you need your

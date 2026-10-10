@@ -54,6 +54,12 @@ export default async function AdminLayout({
             >
               Suppliers
             </Link>
+            <Link
+              href="/admin/brands"
+              className="text-sm text-muted transition hover:text-text"
+            >
+              Brands
+            </Link>
           </div>
           <div className="flex items-center gap-4">
             <Link

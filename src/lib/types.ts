@@ -29,6 +29,7 @@ export interface Product {
   supplier_id?: string | null;
   warranty_months?: number;
   imei_tracked?: boolean;
+  product_group_id?: string | null;
 }
 
 export interface Brand {

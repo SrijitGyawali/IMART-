@@ -1,50 +1,41 @@
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
 import { useCart } from "@/components/cart-provider";
+import type { Category } from "@/lib/types";
+import { StoreIcon } from "./store-icon";
+import { StoreSearch } from "./store-search";
 
-export function Navbar() {
+export function Navbar({ categories }: { categories: Category[] }) {
   const { count, hydrated } = useCart();
+  const [menuOpen, setMenuOpen] = useState(false);
+  const whatsapp = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER ?? "";
 
   return (
-    <header className="sticky top-0 z-50 bg-bg/80 backdrop-blur-xl">
-      <nav className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4">
-        <Link href="/" className="text-lg font-semibold tracking-tight">
-          iMart
-        </Link>
-
-        <div className="flex items-center gap-6 text-sm text-muted">
-          <Link href="/products" className="transition hover:text-text">
-            Products
-          </Link>
-          <Link
-            href="/cart"
-            className="relative flex items-center transition hover:text-text"
-            aria-label="Cart"
-          >
-            <svg
-              width="20"
-              height="20"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.8"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z" />
-              <path d="M3 6h18" />
-              <path d="M16 10a4 4 0 0 1-8 0" />
-            </svg>
-            {hydrated && count > 0 && (
-              <span className="absolute -right-2 -top-2 flex h-4 min-w-4 items-center justify-center rounded-full bg-accent px-1 text-[10px] font-semibold text-white">
-                {count}
-              </span>
-            )}
-          </Link>
+    <>
+      <div className="store-topbar"><div className="store-container"><span>Your neighbourhood tech store. Now online.</span><div><Link href="/#visit">Amarpath, Butwal</Link><span className="topbar-divider" /><Link href="/#help">Shopping help</Link></div></div></div>
+      <header className="store-header">
+        <div className="store-container store-header-main">
+          <Link href="/" className="store-logo" aria-label="iMart home">i<span>Mart</span><i /></Link>
+          <StoreSearch />
+          <div className="header-actions">
+            {whatsapp && <a className="header-help" href={"https://wa.me/977" + whatsapp} target="_blank" rel="noopener noreferrer"><StoreIcon name="headset" width={26} height={26} /><span><small>Need a hand?</small><strong>Talk to us</strong></span></a>}
+            <Link href="/cart" className="header-cart" aria-label={"Shopping bag" + (hydrated ? ", " + count + " items" : "")}><StoreIcon name="bag" width={25} height={25} /><span className="cart-label">My bag</span><span className="cart-count">{hydrated ? count : 0}</span></Link>
+            <button className="mobile-menu-toggle" aria-expanded={menuOpen} aria-controls="store-navigation" aria-label={menuOpen ? "Close navigation" : "Open navigation"} onClick={() => setMenuOpen(!menuOpen)}><StoreIcon name={menuOpen ? "close" : "menu"} /></button>
+          </div>
         </div>
-      </nav>
-      <div className="iridescent-line" />
-    </header>
+        <nav id="store-navigation" aria-label="Main navigation" className={"store-navigation " + (menuOpen ? "is-open" : "")} onClick={() => setMenuOpen(false)}>
+          <div className="store-container">
+            <Link className="browse-all" href="/products"><StoreIcon name="grid" width={17} /> All products</Link>
+            <Link href="/products?category=iphone">iPhone</Link>
+            <Link href="/products?q=MacBook">MacBook</Link>
+            {categories.filter(c => c.slug !== "iphone").map(category => <Link key={category.id} href={"/products?category=" + category.slug}>{category.name}</Link>)}
+            <Link href="/#services">Repairs & support</Link>
+            <Link href="/#visit" className="nav-visit"><StoreIcon name="pin" width={16} /> Visit our store</Link>
+          </div>
+        </nav>
+      </header>
+    </>
   );
 }

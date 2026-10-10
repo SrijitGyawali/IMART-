@@ -1,23 +1,23 @@
 import { CartProvider } from "@/components/cart-provider";
 import { Navbar } from "@/components/navbar";
 import { Footer } from "@/components/footer";
-import { SmoothScroll } from "@/components/smooth-scroll";
-import { ScrollProgress } from "@/components/scroll-progress";
-import { CustomCursor } from "@/components/custom-cursor";
+import { getCategories } from "@/lib/queries";
+import "./store.css";
 
-export default function StoreLayout({
+export default async function StoreLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const categories = await getCategories();
   return (
     <CartProvider>
-      <SmoothScroll />
-      <ScrollProgress />
-      <CustomCursor />
-      <Navbar />
-      {children}
-      <Footer />
+      <div className="storefront">
+        <a href="#store-content" className="store-skip">Skip to content</a>
+        <Navbar categories={categories} />
+        <div id="store-content" className="store-content">{children}</div>
+        <Footer />
+      </div>
     </CartProvider>
   );
 }

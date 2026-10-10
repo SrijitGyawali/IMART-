@@ -5,12 +5,12 @@ import { useRouter } from "next/navigation";
 import { useCart } from "@/components/cart-provider";
 import type { Product } from "@/lib/types";
 
-export function AddToCart({ product }: { product: Product }) {
+export function AddToCart({ product }: { product: Pick<Product, "id" | "name" | "slug" | "price" | "images" | "stock"> }) {
   const { addItem } = useCart();
   const router = useRouter();
   const [added, setAdded] = useState(false);
 
-  if (product.stock === 0) {
+  if (product.stock <= 0) {
     return (
       <button
         disabled

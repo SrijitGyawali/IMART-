@@ -1,108 +1,45 @@
-import Image from "next/image";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import { getProductBySlug } from "@/lib/queries";
+import { getProductBySlug, getProductGroupSiblings } from "@/lib/queries";
 import { formatPrice } from "@/lib/format";
 import { AddToCart } from "@/components/add-to-cart";
+import { VariantPicker } from "@/components/variant-picker";
+import { ProductGallery } from "@/components/product-gallery";
+import { StoreIcon } from "@/components/store-icon";
 
 export const revalidate = 60;
 
-export async function generateMetadata({
-  params,
-}: {
-  params: Promise<{ slug: string }>;
-}): Promise<Metadata> {
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;
   const product = await getProductBySlug(slug);
   if (!product) return { title: "Product not found" };
-  return {
-    title: product.name,
-    description: product.description.slice(0, 160),
-  };
+  return { title: product.name, description: product.description.slice(0, 160) };
 }
 
-export default async function ProductDetailPage({
-  params,
-}: {
-  params: Promise<{ slug: string }>;
-}) {
+export default async function ProductDetailPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
   const product = await getProductBySlug(slug);
   if (!product) notFound();
-
-  const [mainImage, ...restImages] = product.images;
+  const siblings = product.product_group_id ? await getProductGroupSiblings(product.product_group_id, product.id) : [];
+  const variantOptions = siblings.length ? [product, ...siblings].map(p => ({ slug: p.slug, color: p.color ?? "", storage: p.storage ?? "" })) : [];
+  const specs = [["Colour", product.color], ["Storage", product.storage], ["RAM", product.ram]].filter(([, value]) => value);
+  // Keep internal purchase and supplier information out of client props.
+  const cartProduct = { id: product.id, name: product.name, slug: product.slug, price: product.price, images: product.images, stock: product.stock };
 
   return (
-    <main className="mx-auto w-full max-w-6xl flex-1 px-4 pt-10">
-      <div className="grid gap-10 lg:grid-cols-2">
-        {/* Images */}
-        <div>
-          <div className="relative aspect-square overflow-hidden rounded-2xl bg-surface">
-            {mainImage ? (
-              <Image
-                src={mainImage}
-                alt={product.name}
-                fill
-                priority
-                sizes="(max-width: 1024px) 100vw, 50vw"
-                className="object-cover"
-              />
-            ) : (
-              <div className="flex h-full items-center justify-center text-sm font-semibold tracking-widest text-muted">
-                iMart
-              </div>
-            )}
-          </div>
-          {restImages.length > 0 && (
-            <div className="mt-3 grid grid-cols-4 gap-3">
-              {restImages.map((img) => (
-                <div
-                  key={img}
-                  className="relative aspect-square overflow-hidden rounded-xl bg-surface"
-                >
-                  <Image
-                    src={img}
-                    alt={product.name}
-                    fill
-                    sizes="25vw"
-                    className="object-cover"
-                  />
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Info */}
-        <div className="flex flex-col">
-          <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
-            {product.name}
-          </h1>
-          <p className="iridescent-text mt-3 w-fit text-2xl font-semibold">
-            {formatPrice(product.price)}
-          </p>
-
-          {product.stock > 0 && product.stock <= 5 && (
-            <p className="mt-2 text-sm text-muted">
-              Only {product.stock} left in stock
-            </p>
-          )}
-
-          {product.description && (
-            <p className="mt-6 whitespace-pre-line text-sm leading-relaxed text-muted">
-              {product.description}
-            </p>
-          )}
-
-          <div className="mt-8 max-w-sm">
-            <AddToCart product={product} />
-          </div>
-
-          <div className="mt-8 space-y-2 border-t border-border pt-6 text-sm text-muted">
-            <p>✓ Cash on delivery available in Butwal</p>
-            <p>✓ Pickup from Amarpath store</p>
-            <p>✓ Genuine products, shop warranty</p>
-          </div>
+    <main className="store-container">
+      <nav className="store-breadcrumb" aria-label="Breadcrumb"><Link href="/">Home</Link><StoreIcon name="chevron" width={11} /><Link href="/products">All products</Link><StoreIcon name="chevron" width={11} /><span>{product.name}</span></nav>
+      <div className="product-detail-layout">
+        <ProductGallery key={product.id} images={product.images} name={product.name} />
+        <div className="product-detail-info">
+          <p className={"product-availability " + (product.stock <= 0 ? "unavailable" : "")}>{product.stock <= 0 ? "Currently out of stock" : product.stock <= 5 ? "Only " + product.stock + " left in stock" : "In stock and ready to order"}</p>
+          <h1>{product.name}</h1><p className="detail-price">{formatPrice(product.price)}</p>
+          {variantOptions.length > 0 && <VariantPicker options={variantOptions} currentColor={product.color ?? ""} currentStorage={product.storage ?? ""} />}
+          {specs.length > 0 && <div className="detail-specs">{specs.map(([label, value]) => <span key={label}><small>{label}</small>{value}</span>)}</div>}
+          {product.description && <p className="detail-description">{product.description}</p>}
+          <div className="detail-buy"><AddToCart product={cartProduct} /></div>
+          <div className="detail-promises"><p><StoreIcon name="truck" /> Home delivery within Butwal</p><p><StoreIcon name="pin" /> Collect from our Amarpath store</p><p><StoreIcon name="payment" /> Cash on delivery or QR payment</p><p><StoreIcon name="headset" /> Questions? <Link href="/#help" className="store-text-link">We&apos;re here to help</Link></p></div>
         </div>
       </div>
     </main>
