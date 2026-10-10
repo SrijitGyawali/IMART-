@@ -10,13 +10,17 @@ import { PhoneModel } from "./phone-model";
 function StudioLights() {
   return (
     <>
-      <ambientLight intensity={0.12} />
-      <directionalLight position={[-2, 1.2, 1.5]} intensity={0.7} color="#3ddc84" />
+      <ambientLight intensity={0.15} />
+      <directionalLight position={[2.5, 3, 2]} intensity={1.1} />
+      <directionalLight position={[-2, 1.2, 1.5]} intensity={0.9} color="#3ddc84" />
       <Environment resolution={256} frames={1}>
-        <Lightformer form="rect" intensity={2.4} position={[0, 2.6, 1.2]} scale={[4, 0.5, 1]} rotation-x={Math.PI / 2} />
-        <Lightformer form="rect" intensity={1.6} position={[-2.6, 0.2, 1]} scale={[0.35, 3.2, 1]} rotation-y={Math.PI / 2} />
-        <Lightformer form="rect" intensity={1.2} position={[2.6, 0.2, 1]} scale={[0.35, 3.2, 1]} rotation-y={-Math.PI / 2} />
-        <Lightformer form="ring" intensity={0.9} color="#3ddc84" position={[0, 0, -3]} scale={2.2} />
+        {/* Strip softboxes: they become the highlights running along the frame. */}
+        <Lightformer form="rect" intensity={2.6} position={[0, 2.6, 1.2]} scale={[4, 0.5, 1]} rotation-x={Math.PI / 2} />
+        <Lightformer form="rect" intensity={2.2} position={[-2.6, 0.2, 1]} scale={[0.35, 3.2, 1]} rotation-y={Math.PI / 2} />
+        <Lightformer form="rect" intensity={1.6} position={[2.6, 0.2, 1]} scale={[0.35, 3.2, 1]} rotation-y={-Math.PI / 2} />
+        {/* A soft box behind the camera gives the screen glass its studio sheen. */}
+        <Lightformer form="rect" intensity={0.5} position={[0, 0.4, 3.5]} scale={[4, 2.6, 1]} rotation-y={Math.PI} />
+        <Lightformer form="ring" intensity={1.2} color="#3ddc84" position={[0, 0, -3]} scale={2.2} />
       </Environment>
     </>
   );

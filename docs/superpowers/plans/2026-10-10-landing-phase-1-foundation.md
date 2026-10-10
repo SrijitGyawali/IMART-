@@ -2351,3 +2351,15 @@ Expected: `0 failed / N checks` and `No console errors, page errors or 5xx respo
 git add e2e/landing.e2e.mjs
 git commit -m "test(landing): browser checks for tiers, stages, smooth scroll, 3D readiness and shopping flow"
 ```
+
+---
+
+## Execution notes (2026-10-10)
+
+Deviations found while executing, all verified by `npm run e2e` (34/34) and screenshot review:
+
+- **Model pipeline:** the 256 px texture pass matched the anodized texture through its empty URI, so it now names the small textures explicitly. `prune()` stripped the OLED's UVs once its texture was removed, so it now runs with `keepAttributes: true`, and the script asserts the OLED keeps `TEXCOORD_0`. Output: 1.43 MB.
+- **React Compiler lint:** components may not assign to the module-level `scene` object, so `setSceneFinish()` was added to `scene-store.ts` and is used by `FinishPicker`.
+- **CSS collision:** `store.css` still held rules for the deleted old home page (`.hero-copy`, `.hero-price`, `.service-list`, …), which restyled the new hero. 154 dead rules were removed. A rule was removed only when every selector in it needs a class that no component uses.
+- **Hero look:** the front-on phone read as a black slab. Added a front softbox and a white key light, and gave the OLED an emerald idle wallpaper (generated `CanvasTexture`; Phase 3 replaces it with the screen shader). Desktop phone fill is 0.72; mobile is 0.45 at +0.095·vh, between the header and the headline. Hero word opacity is 0.028.
+- **Also removed:** dead global CSS beyond the listed classes (marquee, aurora, noise, particles, ripple, custom cursor, `btn-glass`).

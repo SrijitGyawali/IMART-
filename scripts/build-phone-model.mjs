@@ -37,7 +37,8 @@ oled
   .setBaseColorFactor([0.012, 0.014, 0.013, 1]);
 
 await doc.transform(
-  prune(),
+  // keepAttributes: the screen's UVs look unused once the wallpaper is gone, but our screen UI needs them.
+  prune({ keepAttributes: true }),
   dedup(),
   textureCompress({ encoder: sharp, targetFormat: "webp", resize: [1024, 1024], quality: 88, pattern: /Anodized/ }),
   // `pattern` is tested against the texture's name *and* URI (often empty), so name the small ones explicitly.
@@ -59,6 +60,8 @@ if (missing.length) problems.push(`missing materials: ${missing.join(", ")}`);
 if (out.listAnimations().length) problems.push("animations were not removed");
 const oledOut = out.listMaterials().find((m) => m.getName() === "OLED");
 if (oledOut?.getBaseColorTexture() || oledOut?.getEmissiveTexture()) problems.push("OLED still has a texture");
+const oledPrims = out.listMeshes().flatMap((mesh) => mesh.listPrimitives()).filter((p) => p.getMaterial()?.getName() === "OLED");
+if (!oledPrims.length || oledPrims.some((p) => !p.getAttribute("TEXCOORD_0"))) problems.push("OLED lost its UVs (TEXCOORD_0)");
 const used = out.listExtensionsUsed().map((e) => e.extensionName);
 for (const ext of ["EXT_meshopt_compression", "EXT_texture_webp"]) {
   if (!used.includes(ext)) problems.push(`missing ${ext}`);

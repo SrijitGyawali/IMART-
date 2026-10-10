@@ -3,7 +3,10 @@
 import { useLayoutEffect, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import { useGLTF } from "@react-three/drei";
-import { Box3, Color, Group, MathUtils, Matrix4, Mesh, MeshStandardMaterial, Quaternion, Vector3 } from "three";
+import {
+  Box3, CanvasTexture, Color, Group, MathUtils, Matrix4, Mesh, MeshStandardMaterial, Quaternion,
+  SRGBColorSpace, Vector3,
+} from "three";
 import { MODEL_URL } from "../config";
 import type { Finish } from "../data";
 import { FALLBACK_FINISH } from "../data";
@@ -78,6 +81,41 @@ function measure(model: Group) {
   return { correction, center: box.getCenter(new Vector3()), height: Math.max(size.x, size.y, size.z) };
 }
 
+let wallpaper: CanvasTexture | null = null;
+
+/** iMart's own idle screen: a soft emerald glow, centred so UV orientation doesn't matter. */
+function getWallpaper(): CanvasTexture | null {
+  if (wallpaper) return wallpaper;
+  const canvas = document.createElement("canvas");
+  canvas.width = 512;
+  canvas.height = 1024;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return null;
+  const glow = ctx.createRadialGradient(256, 512, 16, 256, 512, 640);
+  glow.addColorStop(0, "#1f8a5b");
+  glow.addColorStop(0.32, "#0d3f29");
+  glow.addColorStop(0.68, "#04140d");
+  glow.addColorStop(1, "#010403");
+  ctx.fillStyle = glow;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  wallpaper = new CanvasTexture(canvas);
+  wallpaper.colorSpace = SRGBColorSpace;
+  return wallpaper;
+}
+
+function applyWallpaper(screens: MeshStandardMaterial[]) {
+  const texture = getWallpaper();
+  if (!texture) return;
+  for (const m of screens) {
+    m.map = null;
+    m.color.set("#000000");
+    m.emissive.set("#ffffff");
+    m.emissiveMap = texture;
+    m.emissiveIntensity = 0.85;
+    m.needsUpdate = true;
+  }
+}
+
 function toTarget(finish: Omit<Finish, "id" | "label">, target: FinishTarget) {
   target.aluminium.set(finish.aluminium);
   target.antenna.set(finish.aluminium).multiplyScalar(0.55);
@@ -131,6 +169,7 @@ export function PhoneModel({
       antenna: materialsNamed(model, ANTENNA),
       glass: materialsNamed(model, BACK_GLASS),
     };
+    applyWallpaper(materialsNamed(model, ["OLED"]));
     toTarget(initialFinish ?? FALLBACK_FINISH, target.current);
     applyFinish(materials.current, target.current, 1);
     appliedFinish.current = initialFinish?.id ?? null;
@@ -142,14 +181,15 @@ export function PhoneModel({
     if (!p || !mats) return;
     const { width: vw, height: vh } = state.viewport;
     const mobile = vw / vh < 0.9;
-    p.scale.setScalar((vh * (mobile ? 0.5 : 0.74)) / height.current);
+    // Mobile: 45% of the viewport, between the header and the headline. Desktop: right of centre.
+    p.scale.setScalar((vh * (mobile ? 0.45 : 0.72)) / height.current);
 
     const sm = smoothed.current;
     sm.x = MathUtils.damp(sm.x, tier === "high" ? sceneState.pointer.x : 0, 2.5, delta);
     sm.y = MathUtils.damp(sm.y, tier === "high" ? sceneState.pointer.y : 0, 2.5, delta);
     const t = state.clock.elapsedTime;
     p.position.x = mobile ? 0 : vw * 0.17;
-    p.position.y = (mobile ? vh * 0.2 : -vh * 0.01) + Math.sin(t * 0.35) * vh * 0.0025;
+    p.position.y = (mobile ? vh * 0.095 : -vh * 0.03) + Math.sin(t * 0.35) * vh * 0.0025;
     p.rotation.y = BASE_YAW + Math.sin(t * 0.21) * 0.012 + sm.x * 0.05;
     p.rotation.x = BASE_PITCH + Math.sin(t * 0.17) * 0.006 + sm.y * 0.025;
 
