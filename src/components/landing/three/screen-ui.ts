@@ -1,4 +1,5 @@
 import { CanvasTexture, LinearFilter, type MeshStandardMaterial, type Texture } from "three";
+import { glslStreets, SCREEN_ASPECT, STREETS } from "../film/streets";
 
 export interface ScreenUniforms {
   uPower: { value: number };
@@ -91,7 +92,7 @@ uniform float uMorph; uniform float uMap; uniform float uNotify; uniform float u
 uniform sampler2D uAtlas;
 uniform vec4 uLCash; uniform vec4 uLQr; uniform vec4 uLReady; uniform vec4 uLHome; uniform vec4 uLPickup; uniform vec4 uLConfirmed;
 
-#define SCREEN_ASPECT 0.4605
+#define SCREEN_ASPECT ${SCREEN_ASPECT}
 #define ATLAS_ASPECT 2.0
 
 float sdSegment(vec2 p, vec2 a, vec2 b) { vec2 pa = p - a, ba = b - a; float h = clamp(dot(pa, ba) / dot(ba, ba), 0.0, 1.0); return length(pa - ba * h); }
@@ -108,11 +109,7 @@ float drawLabel(vec2 p, vec2 c, float h, vec4 r) {
   return texture2D(uAtlas, r.xy + vec2(t.x, 1.0 - t.y) * r.zw).a;
 }
 
-const vec4 STREETS[9] = vec4[9](
-  vec4(-0.23, 0.30, 0.23, 0.24), vec4(-0.23, 0.02, 0.23, 0.10), vec4(-0.23, -0.16, 0.23, -0.10),
-  vec4(-0.12, 0.38, -0.06, -0.30), vec4(0.10, 0.40, 0.04, -0.30), vec4(-0.23, 0.19, 0.0, 0.08),
-  vec4(0.0, 0.08, 0.23, -0.02), vec4(-0.18, -0.30, 0.18, -0.22), vec4(0.18, 0.40, 0.23, 0.20)
-);
+${glslStreets()}
 
 vec3 screenUI(vec2 uv) {
   vec2 s = vec2(uv.x, 1.0 - uv.y);
@@ -163,8 +160,8 @@ vec3 screenUI(vec2 uv) {
   // Delivery map: streets drawn by light, the pin pulsing at the store.
   if (uMap > 0.001) {
     float lines = 0.0;
-    for (int i = 0; i < 9; i++) {
-      float f = clamp(uMap * 9.0 - float(i), 0.0, 1.0);
+    for (int i = 0; i < ${STREETS.length}; i++) {
+      float f = clamp(uMap * ${STREETS.length}.0 - float(i), 0.0, 1.0);
       if (f <= 0.0) continue;
       vec2 a = STREETS[i].xy;
       vec2 b = mix(a, STREETS[i].zw, f);

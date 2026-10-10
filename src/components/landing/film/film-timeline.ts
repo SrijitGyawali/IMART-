@@ -57,7 +57,9 @@ const KEYS: Array<[number, Pose]> = [
   [0.5, { yaw: 0.45, pitch: 0.06, scale: 1, exposure: 1, gap: 0, x: 0.08 }],
   [0.58, { yaw: 0.22, pitch: 0.04, scale: 1, exposure: 1, gap: 0, x: 0.04 }],
   [0.645, { yaw: 0, pitch: 0, scale: 1.1, exposure: 1, gap: 0, x: 0 }],
-  [1, { yaw: 0, pitch: 0, scale: 1.1, exposure: 1, gap: 0, x: 0 }],
+  [0.9, { yaw: 0, pitch: 0, scale: 1.1, exposure: 1, gap: 0, x: 0 }],
+  // The big transition: the phone falls slightly backward as white light takes over.
+  [1, { yaw: 0.12, pitch: -0.32, scale: 0.55, exposure: 1.15, gap: 0, x: 0 }],
 ];
 
 export function filmPose(p: number): Pose {
@@ -103,7 +105,7 @@ export function filmBeats(p: number) {
     sweep: sweepOn ? ramp(p, 0.1, 0.17) : -1,
     outline: window4(p, 0.165, 0.175, 0.19, 0.205),
     envLive: p >= 0.095 && p <= 0.175,
-    power: 1 - window4(p, 0.18, 0.22, 0.56, 0.585),
+    power: (1 - window4(p, 0.18, 0.22, 0.56, 0.585)) * (1 - ramp(p, 0.91, 0.95)),
     payCard: window4(p, 0.59, 0.61, 0.69, 0.71),
     pay: ramp(p, 0.62, 0.66),
     qr: ramp(p, 0.655, 0.68),
@@ -112,6 +114,11 @@ export function filmBeats(p: number) {
     map: ramp(p, 0.77, 0.83),
     notify: ramp(p, 0.85, 0.88),
     ui: window4(p, 0.59, 0.61, 0.96, 0.99),
+    // Moment 05: lines escape the screen, white floods in, lines become the store's guides, the phone lands.
+    escape: ramp(p, 0.9, 0.945),
+    flood: ramp(p, 0.92, 0.985),
+    guides: ramp(p, 0.945, 0.995),
+    land: ramp(p, 0.95, 1),
   };
 }
 

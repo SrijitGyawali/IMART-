@@ -55,3 +55,17 @@ test("screen story runs in order", () => {
   assert.ok(close(filmBeats(0.8).morph, 2));
   assert.ok(filmBeats(0.88).map > 0.99 && filmBeats(0.89).notify > 0.5);
 });
+
+test("the big transition: escape, flood, guides, landing — in that order", () => {
+  const b = (p: number) => filmBeats(p);
+  assert.equal(b(0.89).escape, 0);
+  assert.ok(b(0.93).escape > 0 && b(0.93).flood < b(0.93).escape);
+  assert.ok(b(0.97).guides > 0.4 && b(0.97).flood > 0.6);
+  assert.ok(b(1).flood > 0.99 && b(1).guides > 0.99 && b(1).land > 0.99);
+  assert.ok(b(0.95).power < b(0.9).power, "screen powers down as the lines leave it");
+});
+
+test("the phone falls back at the end of the film", () => {
+  const end = filmPose(1);
+  assert.ok(end.scale < 0.7 && end.pitch < -0.2);
+});
