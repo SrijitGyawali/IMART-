@@ -125,7 +125,20 @@ export interface FilmLabel {
 export const film = {
   progress: 0,
   labels: Array.from({ length: 5 }, (): FilmLabel => ({ x: 0, y: 0, visible: false })),
+  /** The phone screen's projected rectangle in CSS px: left, top, right, bottom. */
+  screen: { l: 0, t: 0, r: 0, b: 0 },
+  /** The first store tile's horizontal position in viewport px (scroll-independent). */
+  tile: { x: 0, w: 0 },
 };
+
+export function setFilmScreen(l: number, t: number, r: number, b: number) {
+  Object.assign(film.screen, { l, t, r, b });
+}
+
+export function setFilmTile(x: number, w: number) {
+  film.tile.x = x;
+  film.tile.w = w;
+}
 
 export function setFilmProgress(p: number) {
   film.progress = p;

@@ -8,7 +8,7 @@ import { acquireStringTune } from "./motion/string-tune";
 import { bindHeroHandoff, playHeroEntrance, playStudioSweep, whenPhoneReady } from "./motion/hero-motion";
 import { bindFilm } from "./motion/film";
 import {
-  getSceneFinish, isBootDone, scene, setSceneFinish, setSceneSlot, setSceneVisible, subscribeBoot,
+  getSceneFinish, isBootDone, scene, setFilmTile, setSceneFinish, setSceneSlot, setSceneVisible, subscribeBoot,
 } from "./scene-store";
 import PhoneLayer from "./three/phone-layer";
 import { PrecisionCursor } from "./cursor/precision-cursor";
@@ -41,6 +41,13 @@ function trackPointer(root: HTMLElement): () => void {
     scene.pointer.x = 0;
     scene.pointer.y = 0;
   };
+}
+
+function measureTile(root: HTMLElement) {
+  const tile = root.querySelector<HTMLElement>(".rail-tile");
+  if (!tile) return;
+  const r = tile.getBoundingClientRect();
+  setFilmTile(r.left, r.width);
 }
 
 function measureSlot(slot: HTMLElement) {
@@ -95,11 +102,16 @@ export function LandingExperience({
   useEffect(() => {
     const slot = rootRef.current?.querySelector<HTMLElement>(".hero-device-slot");
     if (!slot) return;
-    measureSlot(slot);
+    const root = rootRef.current;
+    const measure = () => {
+      measureSlot(slot);
+      if (root) measureTile(root);
+    };
+    measure();
     let timer = 0;
     const onResize = () => {
       window.clearTimeout(timer);
-      timer = window.setTimeout(() => measureSlot(slot), 120);
+      timer = window.setTimeout(measure, 120);
     };
     window.addEventListener("resize", onResize);
     return () => {
@@ -169,6 +181,8 @@ export function LandingExperience({
       data-capture={captureId ? "" : undefined}
     >
       {children}
+      {/* White light for the big transition: under the canvas, so the phone stays on top of it. */}
+      <div className="landing-flood" aria-hidden="true" />
       {tier !== null && (tier !== "low" || captureId) && (
         <PhoneLayer
           tier={tier === "low" ? "high" : tier}

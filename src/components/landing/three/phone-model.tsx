@@ -10,7 +10,7 @@ import {
 import { MODEL_URL, STILL_FILL } from "../config";
 import { FALLBACK_FINISH, type Finish } from "../data";
 import { filmBeats, filmPose, ramp } from "../film/film-timeline";
-import { film, scene as sceneState, setFilmLabel, setPhoneUv } from "../scene-store";
+import { film, scene as sceneState, setFilmLabel, setFilmScreen, setPhoneUv } from "../scene-store";
 import { createSharedWipe, createWipeColors, patchWipe, type SharedWipe, type WipeColors } from "./finish-wipe";
 import { applyLayers, buildLayers, disposeLayers, layerOffset, type LayerRig } from "./layers";
 import { createScreenUniforms, disposeScreen, patchScreen, type ScreenUniforms } from "./screen-ui";
@@ -156,6 +156,7 @@ function buildRig(model: Group, orient: Group, centre: Group): Rig {
 const projected = new Vector3();
 const scratch = new Vector3();
 const other = new Vector3();
+const CORNERS = [[-1, -1], [1, -1], [1, 1], [-1, 1]] as const;
 
 interface FrameInput {
   state: RootState;
@@ -205,6 +206,13 @@ function frame({ state, delta, place, light, outline, rig, tier, look, capture }
   place.position.set(x, y + Math.sin(t * 0.35) * vh * 0.0025 * idle, 0);
   place.rotation.y = MathUtils.lerp(BASE_YAW, pose.yaw, k) + Math.sin(t * 0.21) * 0.012 * idle + sm.x * 0.05 * idle;
   place.rotation.x = MathUtils.lerp(BASE_PITCH, pose.pitch, k) + Math.sin(t * 0.17) * 0.006 * idle + sm.y * 0.025 * idle;
+
+  // Moment 05: the phone descends toward the first store tile's column.
+  if (beats.land > 0 && film.tile.w > 0) {
+    const tileX = ((film.tile.x + film.tile.w / 2) / state.size.width - 0.5) * vw;
+    place.position.x = MathUtils.lerp(place.position.x, tileX, beats.land);
+    place.position.y = MathUtils.lerp(place.position.y, -vh * 0.42, beats.land);
+  }
 
   // Layers open along the thickness axis; the internals appear once the shell opens or is scanned.
   const gapSize = mobile ? 0.009 : 0.013;
@@ -270,6 +278,22 @@ function frame({ state, delta, place, light, outline, rig, tier, look, capture }
     const edge = other.x > scratch.x ? other : scratch;
     setFilmLabel(i, ((edge.x + 1) / 2) * state.size.width, ((1 - edge.y) / 2) * state.size.height, edge.z < 1);
   }
+
+  // The screen's projected rectangle: the escaping map lines start exactly on it.
+  let left = Infinity;
+  let top = Infinity;
+  let right = -Infinity;
+  let bottom = -Infinity;
+  for (const [sx, sy] of CORNERS) {
+    scratch.set(sx * 0.0365, sy * 0.079, 0.004).applyMatrix4(place.matrixWorld).project(state.camera);
+    const px = ((scratch.x + 1) / 2) * state.size.width;
+    const py = ((1 - scratch.y) / 2) * state.size.height;
+    left = Math.min(left, px);
+    right = Math.max(right, px);
+    top = Math.min(top, py);
+    bottom = Math.max(bottom, py);
+  }
+  setFilmScreen(left, top, right, bottom);
 
   projected.copy(place.position).project(state.camera);
   setPhoneUv((projected.x + 1) / 2, (1 - projected.y) / 2);

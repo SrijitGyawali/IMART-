@@ -1,3 +1,4 @@
+import { EscapeLines } from "./escape-lines";
 import { FilmLabels } from "./film-labels";
 
 const ACTS = [
@@ -56,6 +57,7 @@ export function ProductFilm() {
           ))}
         </div>
         <FilmLabels />
+        <EscapeLines />
       </div>
     </section>
   );

@@ -1,5 +1,5 @@
 import { actOpacity, activeAct, filmBeats } from "../film/film-timeline";
-import { holdEnvironment, scene, setFilmProgress } from "../scene-store";
+import { film, holdEnvironment, scene, setFilmProgress } from "../scene-store";
 import { getGsap } from "./gsap";
 
 /** One scrubbed tween drives the whole film; the DOM and the 3D both read film.progress. */
@@ -21,6 +21,12 @@ export function bindFilm(root: HTMLElement): () => void {
     section.style.setProperty("--labels", o.labels.toFixed(3));
     section.dataset.act = String(activeAct(p));
     const beats = filmBeats(p);
+    // White light floods out from behind the phone's screen (moment 05).
+    root.style.setProperty("--flood", beats.flood.toFixed(3));
+    root.style.setProperty("--fx", `${((film.screen.l + film.screen.r) / 2).toFixed(0)}px`);
+    root.style.setProperty("--fy", `${((film.screen.t + film.screen.b) / 2).toFixed(0)}px`);
+    // Once the page is mostly white the header and cursor switch to their light-store look.
+    root.toggleAttribute("data-flooded", beats.flood > 0.45);
     // The lens highlight in act 01 borrows the studio sweep strip.
     if (p > 0 && p < 1) scene.sweep = beats.sweep;
     if (beats.envLive && !release) release = holdEnvironment();
@@ -45,6 +51,8 @@ export function bindFilm(root: HTMLElement): () => void {
     tween.kill();
     release?.();
     delete root.dataset.film;
+    root.style.removeProperty("--flood");
+    root.removeAttribute("data-flooded");
     setFilmProgress(0);
   };
 }

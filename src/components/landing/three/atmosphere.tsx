@@ -4,7 +4,8 @@ import { useEffect, useMemo } from "react";
 import { useFrame } from "@react-three/fiber";
 import { Color, ShaderMaterial } from "three";
 import type { Finish } from "../data";
-import { scene as sceneState } from "../scene-store";
+import { film, scene as sceneState } from "../scene-store";
+import { filmBeats } from "../film/film-timeline";
 
 const vertexShader = /* glsl */ `
 varying vec2 vUv;
@@ -20,6 +21,7 @@ uniform vec2 uRes;
 uniform vec3 uTint;
 uniform float uDark;
 uniform vec2 uCenter;
+uniform float uFlood;
 varying vec2 vUv;
 
 float hash(vec2 p) {
@@ -63,6 +65,9 @@ void main() {
   float grain = (hash(vUv * uRes + fract(uTime * 0.71) * 311.0) - 0.5) * 0.035;
   col = max(col + grain, 0.0);
   float alpha = clamp(max(col.r, max(col.g, col.b)) * 1.8, 0.0, 0.85);
+  // The aurora disappears as white light takes over (moment 05).
+  col *= 1.0 - uFlood;
+  alpha *= 1.0 - uFlood;
   gl_FragColor = vec4(min(col, vec3(alpha)), alpha);
 }`;
 
@@ -74,6 +79,7 @@ function tick(material: ShaderMaterial, elapsed: number, width: number, height: 
   u.uRes.value[0] = width;
   u.uRes.value[1] = height;
   u.uDark.value = sceneState.handoff;
+  u.uFlood.value = filmBeats(film.progress).flood;
   u.uCenter.value[0] = sceneState.phoneUv.x;
   u.uCenter.value[1] = 1 - sceneState.phoneUv.y;
   tintTarget.set(finish?.aluminium ?? "#3A3B3E");
@@ -93,6 +99,7 @@ export function Atmosphere({ quality, initialFinish }: { quality: "high" | "mid"
           uTint: { value: new Color(initialFinish?.aluminium ?? "#3A3B3E") },
           uDark: { value: 0 },
           uCenter: { value: [0.67, 0.5] },
+          uFlood: { value: 0 },
         },
         transparent: true,
         premultipliedAlpha: true,
