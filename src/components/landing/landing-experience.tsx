@@ -95,6 +95,7 @@ export function LandingExperience({
         <PhoneLayer
           tier={tier}
           initialFinish={initialFinish}
+          captureFinish={null}
           onReady={() => rootRef.current?.setAttribute("data-phone", "ready")}
           onError={() => rootRef.current?.setAttribute("data-phone", "failed")}
         />

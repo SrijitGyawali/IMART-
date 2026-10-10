@@ -22,18 +22,20 @@ class CanvasBoundary extends Component<{ onError: () => void; children: ReactNod
 export default function PhoneLayer({
   tier,
   initialFinish,
+  captureFinish,
   onReady,
   onError,
 }: {
   tier: "high" | "mid";
   initialFinish: Finish | null;
+  captureFinish: Finish | null;
   onReady: () => void;
   onError: () => void;
 }) {
   return (
     <div className="phone-layer" aria-hidden="true">
       <CanvasBoundary onError={onError}>
-        <PhoneCanvas tier={tier} initialFinish={initialFinish} onReady={onReady} />
+        <PhoneCanvas tier={tier} initialFinish={initialFinish} captureFinish={captureFinish} onReady={onReady} />
       </CanvasBoundary>
     </div>
   );

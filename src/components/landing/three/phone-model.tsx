@@ -1,37 +1,38 @@
 "use client";
 
 import { useLayoutEffect, useRef } from "react";
-import { useFrame } from "@react-three/fiber";
+import { useFrame, type RootState } from "@react-three/fiber";
 import { useGLTF } from "@react-three/drei";
 import {
-  Box3, CanvasTexture, Color, Group, MathUtils, Matrix4, Mesh, MeshStandardMaterial, Quaternion,
-  SRGBColorSpace, Vector3,
+  Box3, CanvasTexture, Group, MathUtils, Matrix4, Mesh, MeshStandardMaterial, PointLight,
+  Quaternion, SRGBColorSpace, Vector3,
 } from "three";
-import { MODEL_URL } from "../config";
-import type { Finish } from "../data";
-import { FALLBACK_FINISH } from "../data";
-import { scene as sceneState } from "../scene-store";
+import { MODEL_URL, STILL_FILL } from "../config";
+import { FALLBACK_FINISH, type Finish } from "../data";
+import { scene as sceneState, setPhoneUv } from "../scene-store";
+import { createSharedWipe, createWipeColors, patchWipe, type SharedWipe, type WipeColors } from "./finish-wipe";
 
 const ALUMINIUM = ["Anodized aluminum", "Metal tint"];
 const ANTENNA = ["Plastic antena"];
 const BACK_GLASS = ["Frosted glass"];
-const BASE_YAW = -0.32;
-const BASE_PITCH = 0.04;
+const ANTENNA_SHADE = 0.55;
+export const BASE_YAW = -0.32;
+export const BASE_PITCH = 0.04;
+const FILM_YAW = -0.1;
 
 useGLTF.preload(MODEL_URL, false, true);
 
-interface FinishMaterials {
-  aluminium: MeshStandardMaterial[];
-  antenna: MeshStandardMaterial[];
-  glass: MeshStandardMaterial[];
-}
+type Look = Omit<Finish, "id" | "label">;
 
-interface FinishTarget {
-  aluminium: Color;
-  antenna: Color;
-  glass: Color;
-  metalness: number;
-  roughness: number;
+interface Rig {
+  shared: SharedWipe;
+  aluminium: WipeColors;
+  antenna: WipeColors;
+  glass: WipeColors;
+  metals: MeshStandardMaterial[];
+  height: number;
+  smoothed: { x: number; y: number };
+  ready: boolean;
 }
 
 function materialsNamed(root: Group, names: string[]): MeshStandardMaterial[] {
@@ -48,7 +49,8 @@ function materialsNamed(root: Group, names: string[]): MeshStandardMaterial[] {
 
 /**
  * Measures the model in its own space (independent of our wrapper groups, so re-running is safe):
- * the rotation that stands it upright with the screen facing +Z, its centre and its height.
+ * the rotation that stands it upright with the screen facing +Z, its centre, its height and its
+ * width range in that upright frame.
  */
 function measure(model: Group) {
   model.updateMatrixWorld(true);
@@ -77,8 +79,19 @@ function measure(model: Group) {
     const bounds = mesh.geometry.boundingBox;
     if (bounds) box.union(bounds.clone().applyMatrix4(relative(mesh)));
   }
+  const center = box.getCenter(new Vector3());
   const size = box.getSize(new Vector3());
-  return { correction, center: box.getCenter(new Vector3()), height: Math.max(size.x, size.y, size.z) };
+  const upright = box.clone().applyMatrix4(
+    new Matrix4()
+      .makeRotationFromQuaternion(correction)
+      .multiply(new Matrix4().makeTranslation(-center.x, -center.y, -center.z)),
+  );
+  return {
+    correction,
+    center,
+    height: Math.max(size.x, size.y, size.z),
+    width: [upright.min.x, upright.max.x] as const,
+  };
 }
 
 let wallpaper: CanvasTexture | null = null;
@@ -116,98 +129,137 @@ function applyWallpaper(screens: MeshStandardMaterial[]) {
   }
 }
 
-function toTarget(finish: Omit<Finish, "id" | "label">, target: FinishTarget) {
-  target.aluminium.set(finish.aluminium);
-  target.antenna.set(finish.aluminium).multiplyScalar(0.55);
-  target.glass.set(finish.glass);
-  target.metalness = finish.metalness;
-  target.roughness = finish.roughness;
+function buildRig(model: Group, orient: Group, centre: Group): Rig {
+  const { correction, center, height, width } = measure(model);
+  orient.quaternion.copy(correction);
+  centre.position.copy(center).negate();
+  const rig: Rig = {
+    shared: createSharedWipe(width[0], width[1]),
+    aluminium: createWipeColors(),
+    antenna: createWipeColors(),
+    glass: createWipeColors(),
+    metals: materialsNamed(model, ALUMINIUM),
+    height,
+    smoothed: { x: 0, y: 0 },
+    ready: false,
+  };
+  for (const m of rig.metals) patchWipe(m, rig.shared, rig.aluminium);
+  for (const m of materialsNamed(model, ANTENNA)) patchWipe(m, rig.shared, rig.antenna);
+  for (const m of materialsNamed(model, BACK_GLASS)) patchWipe(m, rig.shared, rig.glass);
+  applyWallpaper(materialsNamed(model, ["OLED"]));
+  return rig;
 }
 
-function applyFinish(materials: FinishMaterials, target: FinishTarget, k: number) {
-  for (const m of materials.aluminium) {
-    m.color.lerp(target.aluminium, k);
-    m.metalness += (target.metalness - m.metalness) * k;
-    m.roughness += (target.roughness - m.roughness) * k;
+const projected = new Vector3();
+
+interface FrameInput {
+  state: RootState;
+  delta: number;
+  place: Group;
+  light: PointLight | null;
+  rig: Rig;
+  tier: "high" | "mid";
+  look: Look;
+  capture: boolean;
+}
+
+function frame({ state, delta, place, light, rig, tier, look, capture }: FrameInput) {
+  const { width: vw, height: vh } = state.viewport;
+  const mobile = vw / vh < 0.9;
+  const t = state.clock.elapsedTime;
+  const k = capture ? 0 : sceneState.handoff;
+  const motion = capture ? 0 : 1;
+
+  // Placement: where the poster still sits (device slot), easing to centre during the hand-off.
+  let x = vw * 0.17;
+  let y = 0;
+  let h = vh * 0.72;
+  const slot = sceneState.slot;
+  if (capture) {
+    x = 0;
+    h = vh * STILL_FILL;
+  } else if (slot) {
+    x = (slot.cx - 0.5) * vw;
+    y = (0.5 - slot.cy) * vh;
+    h = slot.h * vh * STILL_FILL;
   }
-  for (const m of materials.antenna) m.color.lerp(target.antenna, k);
-  for (const m of materials.glass) m.color.lerp(target.glass, k);
+  x = MathUtils.lerp(x, 0, k);
+  y = MathUtils.lerp(y, 0, k);
+  h = MathUtils.lerp(h, vh * (mobile ? 0.5 : 0.78), k);
+  place.scale.setScalar(h / rig.height);
+
+  const sm = rig.smoothed;
+  const follow = tier === "high" && !capture;
+  sm.x = MathUtils.damp(sm.x, follow ? sceneState.pointer.x : 0, 2.5, delta);
+  sm.y = MathUtils.damp(sm.y, follow ? sceneState.pointer.y : 0, 2.5, delta);
+  place.position.set(x, y + Math.sin(t * 0.35) * vh * 0.0025 * motion, 0);
+  place.rotation.y = MathUtils.lerp(BASE_YAW, FILM_YAW, k) + Math.sin(t * 0.21) * 0.012 * motion + sm.x * 0.05;
+  place.rotation.x = BASE_PITCH + Math.sin(t * 0.17) * 0.006 * motion + sm.y * 0.025;
+
+  // Finish wipe: old finish ahead of the band, new finish behind it.
+  const from = capture ? look : (sceneState.wipe.from ?? look);
+  rig.aluminium.uFrom.value.set(from.aluminium);
+  rig.aluminium.uTo.value.set(look.aluminium);
+  rig.antenna.uFrom.value.set(from.aluminium).multiplyScalar(ANTENNA_SHADE);
+  rig.antenna.uTo.value.set(look.aluminium).multiplyScalar(ANTENNA_SHADE);
+  rig.glass.uFrom.value.set(from.glass);
+  rig.glass.uTo.value.set(look.glass);
+  rig.shared.uWipe.value = capture ? 1.05 : sceneState.wipe.progress;
+  rig.shared.uBand.value = capture ? 0 : sceneState.wipe.band;
+  place.updateMatrixWorld();
+  rig.shared.uPhoneInv.value.copy(place.matrixWorld).invert();
+  const mix = MathUtils.clamp(rig.shared.uWipe.value, 0, 1);
+  for (const m of rig.metals) {
+    m.metalness = MathUtils.lerp(from.metalness, look.metalness, mix);
+    m.roughness = MathUtils.lerp(from.roughness, look.roughness, mix);
+  }
+
+  // Boot reveal and the finish-change dip.
+  state.gl.toneMappingExposure = (capture ? 1 : sceneState.intro.exposure) * (1 - 0.3 * sceneState.dim);
+  if (light) light.intensity = capture ? 0 : sceneState.intro.light * 3;
+
+  projected.copy(place.position).project(state.camera);
+  setPhoneUv((projected.x + 1) / 2, (1 - projected.y) / 2);
 }
 
 export function PhoneModel({
   tier,
   initialFinish,
+  captureFinish,
   onReady,
 }: {
   tier: "high" | "mid";
   initialFinish: Finish | null;
+  captureFinish: Finish | null;
   onReady: () => void;
 }) {
   const { scene: model } = useGLTF(MODEL_URL, false, true);
   const place = useRef<Group>(null);
   const orient = useRef<Group>(null);
   const centre = useRef<Group>(null);
-  const height = useRef(0.1634);
-  const materials = useRef<FinishMaterials | null>(null);
-  const target = useRef<FinishTarget>({
-    aluminium: new Color(), antenna: new Color(), glass: new Color(), metalness: 0.45, roughness: 0.35,
-  });
-  const appliedFinish = useRef<string | null>(null);
-  const smoothed = useRef({ x: 0, y: 0 });
-  const readyFired = useRef(false);
+  const light = useRef<PointLight>(null);
+  const rig = useRef<Rig | null>(null);
 
   useLayoutEffect(() => {
-    const o = orient.current;
-    const c = centre.current;
-    if (!o || !c) return;
-    const { correction, center, height: modelHeight } = measure(model);
-    o.quaternion.copy(correction);
-    c.position.copy(center).negate();
-    height.current = modelHeight;
-    materials.current = {
-      aluminium: materialsNamed(model, ALUMINIUM),
-      antenna: materialsNamed(model, ANTENNA),
-      glass: materialsNamed(model, BACK_GLASS),
-    };
-    applyWallpaper(materialsNamed(model, ["OLED"]));
-    toTarget(initialFinish ?? FALLBACK_FINISH, target.current);
-    applyFinish(materials.current, target.current, 1);
-    appliedFinish.current = initialFinish?.id ?? null;
-  }, [model, initialFinish]);
+    if (!orient.current || !centre.current) return;
+    rig.current = buildRig(model, orient.current, centre.current);
+  }, [model]);
 
   useFrame((state, delta) => {
-    const p = place.current;
-    const mats = materials.current;
-    if (!p || !mats) return;
-    const { width: vw, height: vh } = state.viewport;
-    const mobile = vw / vh < 0.9;
-    // Mobile: 45% of the viewport, between the header and the headline. Desktop: right of centre.
-    p.scale.setScalar((vh * (mobile ? 0.45 : 0.72)) / height.current);
-
-    const sm = smoothed.current;
-    sm.x = MathUtils.damp(sm.x, tier === "high" ? sceneState.pointer.x : 0, 2.5, delta);
-    sm.y = MathUtils.damp(sm.y, tier === "high" ? sceneState.pointer.y : 0, 2.5, delta);
-    const t = state.clock.elapsedTime;
-    p.position.x = mobile ? 0 : vw * 0.17;
-    p.position.y = (mobile ? vh * 0.095 : -vh * 0.03) + Math.sin(t * 0.35) * vh * 0.0025;
-    p.rotation.y = BASE_YAW + Math.sin(t * 0.21) * 0.012 + sm.x * 0.05;
-    p.rotation.x = BASE_PITCH + Math.sin(t * 0.17) * 0.006 + sm.y * 0.025;
-
-    const picked = sceneState.finish;
-    if (picked && picked.id !== appliedFinish.current) {
-      toTarget(picked, target.current);
-      appliedFinish.current = picked.id;
-    }
-    applyFinish(mats, target.current, 1 - Math.exp(-delta * 6));
-
-    if (!readyFired.current) {
-      readyFired.current = true;
+    const r = rig.current;
+    if (!place.current || !r) return;
+    const look = captureFinish ?? sceneState.finish ?? initialFinish ?? FALLBACK_FINISH;
+    frame({ state, delta, place: place.current, light: light.current, rig: r, tier, look, capture: captureFinish !== null });
+    if (!r.ready) {
+      r.ready = true;
       onReady();
     }
   });
 
   return (
     <group ref={place}>
+      {/* The green light from the boot dot, at the phone's front-left edge. */}
+      <pointLight ref={light} color="#3ddc84" intensity={0} distance={0} decay={2} position={[-0.07, 0.05, 0.1]} />
       <group ref={orient}>
         <group ref={centre}>
           <primitive object={model} />
