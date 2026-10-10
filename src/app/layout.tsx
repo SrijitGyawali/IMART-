@@ -14,7 +14,7 @@ export const metadata: Metadata = {
     template: "%s | iMart",
   },
   description:
-    "iMart is your authorized iPhone reseller and repair shop in Amarpath, Butwal. Shop iPhones, accessories, and book repairs.",
+    "iMart in Amarpath, Butwal: genuine iPhones, Mac, accessories and repairs. Home delivery in Butwal or pickup from our store.",
   metadataBase: new URL("https://imart.vercel.app"),
 };
 

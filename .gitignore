@@ -49,3 +49,9 @@ next-env.d.ts
 /.design-sync/.cache/
 /.design-sync/learnings/
 /.design-sync/node_modules
+
+# 3D source assets (large originals; optimized outputs live in public/)
+/assets-src/
+
+# e2e screenshots
+/e2e/.artifacts/
