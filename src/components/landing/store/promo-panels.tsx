@@ -17,7 +17,7 @@ export function PromoPanels({ promos }: { promos: Promo[] }) {
               {promo.linkLabel} <StoreIcon name="arrow" width={18} />
             </Link>
           </div>
-          <div className="promo-media">
+          <div className="promo-media" data-string="parallax" data-string-parallax="0.12">
             {promo.image && <Image src={promo.image} alt={promo.alt} fill sizes="(max-width: 760px) 90vw, 640px" />}
           </div>
         </article>

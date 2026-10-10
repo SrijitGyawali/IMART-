@@ -7,6 +7,7 @@ import { useTier } from "./motion/use-tier";
 import { acquireStringTune } from "./motion/string-tune";
 import { bindHeroHandoff, playHeroEntrance, playStudioSweep, whenPhoneReady } from "./motion/hero-motion";
 import { bindFilm } from "./motion/film";
+import { bindStoreMotion } from "./motion/store-motion";
 import {
   getSceneFinish, isBootDone, scene, setFilmTile, setSceneFinish, setSceneSlot, setSceneVisible, subscribeBoot,
 } from "./scene-store";
@@ -165,6 +166,8 @@ export function LandingExperience({
     if (!reduced) cleanups.push(bindHeroHandoff(root));
     // The pinned film needs the live phone; Low tier keeps the stacked, server-rendered acts.
     if (!reduced && tier !== "low") cleanups.push(bindFilm(root));
+    // The light store comes alive on every tier; it is DOM-only and cheap.
+    if (!reduced) cleanups.push(bindStoreMotion(root));
     return () => {
       unsubscribe();
       cleanups.forEach((cleanup) => cleanup());

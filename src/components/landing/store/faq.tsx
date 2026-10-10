@@ -24,7 +24,9 @@ export function Faq({ contact }: { contact: string }) {
               {question}
               <span className="faq-icon" aria-hidden="true"><i /><i /></span>
             </summary>
-            <p>{answer}</p>
+            <div className="faq-answer">
+              <p>{answer}</p>
+            </div>
           </details>
         ))}
       </div>

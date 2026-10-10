@@ -462,3 +462,44 @@ html[data-entrance="pending"] .hero-copy > * { opacity: 0; animation: landing-re
   stroke-linecap: round;
   filter: drop-shadow(0 0 calc((1 - var(--guide, 0)) * 6px) rgba(61, 220, 132, .7));
 }
+
+/* ---------- The living store ---------- */
+/* Rail tiles lean toward the cursor and a soft light follows it (store-motion writes the vars). */
+.rail-tile {
+  position: relative;
+  transform: perspective(900px) rotateX(var(--ry, 0deg)) rotateY(var(--rx, 0deg));
+  transition: transform .6s var(--ease-normal), background-color .3s var(--ease-normal);
+}
+.rail-tile::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity .3s;
+  background: radial-gradient(240px circle at var(--mx, 50%) var(--my, 50%), rgba(61, 220, 132, .16), transparent 62%);
+}
+.rail-tile:hover::after { opacity: 1; }
+/* Product cards lift their image and nudge the arrow. */
+.showcase-grid .shop-product { transition: border-color .2s, box-shadow .35s var(--ease-normal); }
+.showcase-grid .shop-product-image img { transition: transform .45s var(--ease-normal); }
+.showcase-grid .shop-product:hover .shop-product-image img { transform: translateY(-5px) scale(1.02); }
+.showcase-grid .shop-product:hover { box-shadow: 0 14px 34px rgba(30, 74, 37, .1); }
+.showcase-grid .product-card-bottom > span { transition: transform .3s var(--ease-normal); }
+.showcase-grid .shop-product:hover .product-card-bottom > span { transform: translateX(4px); }
+/* Scaled SVG parts grow from their own centre, not the viewBox origin. */
+.visit-pin circle { transform-box: fill-box; transform-origin: center; }
+/* FAQ answers animate by height on this wrapper (the <p> keeps its padding). */
+.faq-answer { overflow: hidden; }
+/* Service lines draw in after the numbers roll; hover still widens them. */
+@keyframes service-line-in { from { width: 0; } }
+@media (prefers-reduced-motion: no-preference) {
+  .landing[data-tier] .service-list:not(.is-in) .service-line::before { width: 0; }
+  .service-list.is-in .service-line::before { animation: service-line-in .8s var(--ease-normal) .3s backwards; }
+  .service-list.is-in .service-row:nth-child(2) .service-line::before { animation-delay: .42s; }
+  .service-list.is-in .service-row:nth-child(3) .service-line::before { animation-delay: .54s; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .rail-tile { transform: none; }
+}
