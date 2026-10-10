@@ -31,3 +31,7 @@ export function subscribeScene(listener: () => void) {
 export function getSceneVisible() {
   return scene.visible;
 }
+
+export function setSceneFinish(finish: Finish) {
+  scene.finish = finish;
+}
