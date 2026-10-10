@@ -54,5 +54,7 @@ export function bindFilm(root: HTMLElement): () => void {
     root.style.removeProperty("--flood");
     root.removeAttribute("data-flooded");
     setFilmProgress(0);
+    // Unpinning changes the page height (e.g. the 3D failed and the film falls back to stacked acts).
+    if (section.isConnected) ScrollTrigger.refresh();
   };
 }

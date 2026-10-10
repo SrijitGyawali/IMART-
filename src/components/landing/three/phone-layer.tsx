@@ -35,7 +35,7 @@ export default function PhoneLayer({
   return (
     <div className="phone-layer" aria-hidden="true">
       <CanvasBoundary onError={onError}>
-        <PhoneCanvas tier={tier} initialFinish={initialFinish} captureFinish={captureFinish} onReady={onReady} />
+        <PhoneCanvas tier={tier} initialFinish={initialFinish} captureFinish={captureFinish} onReady={onReady} onLost={onError} />
       </CanvasBoundary>
     </div>
   );

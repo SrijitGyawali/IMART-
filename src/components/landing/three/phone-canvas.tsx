@@ -7,6 +7,8 @@ import { getEnvironmentLive, getSceneVisible, subscribeEnvironment, subscribeSce
 import { Atmosphere } from "./atmosphere";
 import { PhoneModel } from "./phone-model";
 import { StudioLights } from "./studio-lights";
+import { ContextGuard, FrameBudget } from "./runtime-guards";
+import { isTierForced } from "../motion/use-tier";
 
 function exposeCapture(canvas: HTMLCanvasElement) {
   (window as Window & { __imartCapture?: () => string }).__imartCapture = () => canvas.toDataURL("image/png");
@@ -17,15 +19,19 @@ export default function PhoneCanvas({
   initialFinish,
   captureFinish,
   onReady,
+  onLost,
 }: {
   tier: "high" | "mid";
   initialFinish: Finish | null;
   captureFinish: Finish | null;
   onReady: () => void;
+  onLost: () => void;
 }) {
   const visible = useSyncExternalStore(subscribeScene, getSceneVisible, () => true);
   const live = useSyncExternalStore(subscribeEnvironment, getEnvironmentLive, () => false);
   const capture = captureFinish !== null;
+  // ?tier= pins the tier for testing, and capture renders stills: neither should change quality mid-run.
+  const monitor = !capture && !isTierForced();
   return (
     <Canvas
       frameloop={visible ? "always" : "never"}
@@ -34,6 +40,8 @@ export default function PhoneCanvas({
       gl={{ antialias: true, alpha: true, powerPreference: "high-performance", preserveDrawingBuffer: capture }}
       onCreated={capture ? ({ gl }) => exposeCapture(gl.domElement) : undefined}
     >
+      <ContextGuard onLost={onLost} />
+      {monitor && <FrameBudget key={tier} />}
       <Suspense fallback={null}>
         {!capture && <Atmosphere quality={tier} initialFinish={initialFinish} />}
         <StudioLights live={live} />

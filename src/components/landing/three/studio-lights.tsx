@@ -30,7 +30,7 @@ export function StudioLights({ live }: { live: boolean }) {
       <ambientLight intensity={0.15} />
       <directionalLight position={[2.5, 3, 2]} intensity={1.1} />
       <directionalLight position={[-2, 1.2, 1.5]} intensity={0.9} color="#3ddc84" />
-      <Environment resolution={256} frames={live ? Infinity : 1}>
+      <Environment resolution={128} frames={live ? Infinity : 1}>
         {/* Strip softboxes: they become the highlights running along the frame. */}
         <Lightformer form="rect" intensity={2.6} position={[0, 2.6, 1.2]} scale={[4, 0.5, 1]} rotation-x={Math.PI / 2} />
         <Lightformer form="rect" intensity={2.2} position={[-2.6, 0.2, 1]} scale={[0.35, 3.2, 1]} rotation-y={Math.PI / 2} />

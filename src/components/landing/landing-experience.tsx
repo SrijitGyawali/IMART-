@@ -3,7 +3,7 @@
 import { useEffect, useRef, useSyncExternalStore } from "react";
 import { parseFinishes, type Finish } from "./data";
 import { readCapture } from "./config";
-import { useTier } from "./motion/use-tier";
+import { dropToLowTier, useTier } from "./motion/use-tier";
 import { acquireStringTune } from "./motion/string-tune";
 import { bindHeroHandoff, playHeroEntrance, playStudioSweep, whenPhoneReady } from "./motion/hero-motion";
 import { bindFilm } from "./motion/film";
@@ -71,6 +71,10 @@ export function LandingExperience({
   const tier = useTier();
   const captureId = useSyncExternalStore(noopSubscribe, () => readCapture(window.location.search), () => null);
   const captureFinish = captureId ? (parseFinishes(captureId.replace(/-/g, " "))[0] ?? null) : null;
+  // Effects key off what they use, so a runtime step-down (high → mid → low) never replays anything.
+  const ready = tier !== null;
+  const live3d = tier !== null && tier !== "low";
+  const depth = tier === "high";
 
   // The device starts in the hero product's first finish.
   useEffect(() => {
@@ -123,8 +127,8 @@ export function LandingExperience({
 
   // Smooth scroll on desktop with a fine pointer; native everywhere else.
   useEffect(() => {
-    if (tier === null || captureId) return;
-    const smooth = tier !== "low" && window.matchMedia("(pointer: fine)").matches;
+    if (!ready || captureId) return;
+    const smooth = live3d && window.matchMedia("(pointer: fine)").matches;
     let release: (() => void) | null = null;
     let cancelled = false;
     acquireStringTune(smooth).then((r) => {
@@ -135,19 +139,19 @@ export function LandingExperience({
       cancelled = true;
       release?.();
     };
-  }, [tier, captureId]);
+  }, [ready, live3d, captureId]);
 
   // Pointer: phone reaction + depth planes (desktop, high tier).
   useEffect(() => {
     const root = rootRef.current;
-    if (tier !== "high" || !root || captureId) return;
+    if (!depth || !root || captureId) return;
     return trackPointer(root);
-  }, [tier, captureId]);
+  }, [depth, captureId]);
 
   // Hero motion: entrance after the boot, first studio sweep once the phone is live, scroll hand-off.
   useEffect(() => {
     const root = rootRef.current;
-    if (tier === null || !root || captureId) return;
+    if (!ready || !root || captureId) return;
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const cleanups: Array<() => void> = [];
     let started = false;
@@ -159,20 +163,27 @@ export function LandingExperience({
         return;
       }
       cleanups.push(playHeroEntrance(root));
-      if (tier !== "low") cleanups.push(whenPhoneReady(root, () => playStudioSweep()));
+      // Low tier never becomes ready, so this simply never fires there.
+      cleanups.push(whenPhoneReady(root, () => playStudioSweep()));
     };
     const unsubscribe = subscribeBoot(start);
     if (isBootDone()) start();
     if (!reduced) cleanups.push(bindHeroHandoff(root));
-    // The pinned film needs the live phone; Low tier keeps the stacked, server-rendered acts.
-    if (!reduced && tier !== "low") cleanups.push(bindFilm(root));
     // The light store comes alive on every tier; it is DOM-only and cheap.
     if (!reduced) cleanups.push(bindStoreMotion(root));
     return () => {
       unsubscribe();
       cleanups.forEach((cleanup) => cleanup());
     };
-  }, [tier, captureId]);
+  }, [ready, captureId]);
+
+  // The pinned film needs the live phone; Low tier (or a failed 3D) keeps the stacked, server-rendered acts.
+  useEffect(() => {
+    const root = rootRef.current;
+    if (!live3d || !root || captureId) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    return bindFilm(root);
+  }, [live3d, captureId]);
 
   return (
     <main
@@ -192,7 +203,10 @@ export function LandingExperience({
           initialFinish={initialFinish}
           captureFinish={captureFinish}
           onReady={() => rootRef.current?.setAttribute("data-phone", "ready")}
-          onError={() => rootRef.current?.setAttribute("data-phone", "failed")}
+          onError={() => {
+            rootRef.current?.setAttribute("data-phone", "failed");
+            dropToLowTier();
+          }}
         />
       )}
       {tier !== null && !captureId && <PrecisionCursor />}

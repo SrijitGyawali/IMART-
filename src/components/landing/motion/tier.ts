@@ -19,9 +19,24 @@ export function decideTier(input: TierInput): Tier {
   return "high";
 }
 
-export function readTierOverride(search: string): Tier | null {
-  const value = new URLSearchParams(search).get("tier");
+export function parseTier(value: string | null): Tier | null {
   return value === "high" || value === "mid" || value === "low" ? value : null;
+}
+
+export function readTierOverride(search: string): Tier | null {
+  return parseTier(new URLSearchParams(search).get("tier"));
+}
+
+const RANK: Record<Tier, number> = { low: 0, mid: 1, high: 2 };
+
+/** One step down: high → mid → low. */
+export function lowerTier(tier: Tier): Tier {
+  return tier === "high" ? "mid" : "low";
+}
+
+/** The lower of the decided tier and the session's cap (set by runtime step-downs). */
+export function capTier(tier: Tier, cap: Tier | null): Tier {
+  return cap !== null && RANK[cap] < RANK[tier] ? cap : tier;
 }
 
 interface NavigatorHints {
