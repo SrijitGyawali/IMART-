@@ -1,7 +1,14 @@
-import { CanvasTexture, LinearFilter, type MeshStandardMaterial, type Texture } from "three";
+import { CanvasTexture, Color, LinearFilter, type MeshStandardMaterial, type Texture } from "three";
 import { glslStreets, SCREEN_ASPECT, STREETS } from "../film/streets";
 
 export interface ScreenUniforms {
+  uWelcome: { value: number };
+  uWelcomeCollapse: { value: number };
+  uFinishTint: { value: Color };
+  uLBrand: { value: number[] };
+  uLHello: { value: number[] };
+  uLButwal: { value: number[] };
+  uLAmarpath: { value: number[] };
   uPower: { value: number };
   uPayCard: { value: number };
   uPay: { value: number };
@@ -28,14 +35,20 @@ const LABELS = {
   uLHome: "HOME DELIVERY IN BUTWAL",
   uLPickup: "PICKUP AT AMARPATH",
   uLConfirmed: "ORDER CONFIRMED",
+  uLBrand: "iMart.",
+  uLHello: "Hello,",
+  uLButwal: "Butwal.",
+  uLAmarpath: "AMARPATH",
 } as const;
 
 const ATLAS_W = 1024;
-const ATLAS_H = 512;
+const ATLAS_H = 1024;
 const ROW = 64;
+const disposed = new WeakSet<ScreenUniforms>();
 
 /** White labels on transparent, drawn once in the site font. Rects are [x, y(top), w, h] in 0..1. */
 function buildAtlas(uniforms: ScreenUniforms) {
+  if (disposed.has(uniforms)) return;
   const canvas = document.createElement("canvas");
   canvas.width = ATLAS_W;
   canvas.height = ATLAS_H;
@@ -47,6 +60,7 @@ function buildAtlas(uniforms: ScreenUniforms) {
   ctx.fillStyle = "#ffffff";
   ctx.textBaseline = "middle";
   Object.entries(LABELS).forEach(([key, text], row) => {
+    if ("letterSpacing" in ctx) ctx.letterSpacing = key === "uLHello" || key === "uLButwal" || key === "uLBrand" ? "-1px" : "4px";
     const width = Math.min(ctx.measureText(text).width + 8, ATLAS_W - 8);
     ctx.fillText(text, 4, row * ROW + ROW / 2);
     const rect = uniforms[key as keyof typeof LABELS].value;
@@ -62,6 +76,10 @@ function buildAtlas(uniforms: ScreenUniforms) {
 export function createScreenUniforms(): ScreenUniforms {
   const rect = () => ({ value: [0, 0, 0, 0] });
   const uniforms: ScreenUniforms = {
+    uWelcome: { value: 1 },
+    uWelcomeCollapse: { value: 0 },
+    uFinishTint: { value: new Color("#D86A2B") },
+    uLBrand: rect(), uLHello: rect(), uLButwal: rect(), uLAmarpath: rect(),
     uPower: { value: 1 },
     uPayCard: { value: 0 },
     uPay: { value: 0 },
@@ -81,8 +99,8 @@ export function createScreenUniforms(): ScreenUniforms {
     uLConfirmed: rect(),
   };
   const draw = () => buildAtlas(uniforms);
-  if (document.fonts?.status === "loaded") draw();
-  else document.fonts?.ready.then(draw);
+  if (!document.fonts || document.fonts.status === "loaded") draw();
+  else document.fonts.ready.then(draw);
   return uniforms;
 }
 
@@ -90,10 +108,12 @@ const SCREEN_GLSL = /* glsl */ `
 uniform float uPower; uniform float uPayCard; uniform float uPay; uniform float uQr; uniform float uQrCollapse;
 uniform float uMorph; uniform float uMap; uniform float uNotify; uniform float uTime; uniform float uUi;
 uniform sampler2D uAtlas;
+uniform float uWelcome; uniform float uWelcomeCollapse; uniform vec3 uFinishTint;
+uniform vec4 uLBrand; uniform vec4 uLHello; uniform vec4 uLButwal; uniform vec4 uLAmarpath;
 uniform vec4 uLCash; uniform vec4 uLQr; uniform vec4 uLReady; uniform vec4 uLHome; uniform vec4 uLPickup; uniform vec4 uLConfirmed;
 
 #define SCREEN_ASPECT ${SCREEN_ASPECT}
-#define ATLAS_ASPECT 2.0
+#define ATLAS_ASPECT 1.0
 
 float sdSegment(vec2 p, vec2 a, vec2 b) { vec2 pa = p - a, ba = b - a; float h = clamp(dot(pa, ba) / dot(ba, ba), 0.0, 1.0); return length(pa - ba * h); }
 float sdRoundBox(vec2 p, vec2 b, float r) { vec2 q = abs(p) - b + r; return length(max(q, 0.0)) + min(max(q.x, q.y), 0.0) - r; }
@@ -116,10 +136,33 @@ vec3 screenUI(vec2 uv) {
   vec2 p = (s - 0.5) * vec2(SCREEN_ASPECT, 1.0);
   vec3 green = vec3(0.24, 0.86, 0.52);
 
-  // iMart idle wallpaper: an emerald glow.
+  // Welcome: deep emerald with light borrowed from the selected metal finish.
   float r = length(p * vec2(1.0, 0.8));
-  vec3 col = mix(vec3(0.12, 0.54, 0.36), vec3(0.004, 0.016, 0.012), smoothstep(0.0, 0.55, r));
+  vec3 col = mix(vec3(0.025, 0.14, 0.085), vec3(0.003, 0.012, 0.008), smoothstep(0.0, 0.55, r));
+  col += uFinishTint * exp(-length((p - vec2(0.20, -0.22)) * vec2(3.0, 1.2)) * 4.0) * 0.14 * uWelcome;
   col *= 1.0 - 0.82 * uUi;
+
+  if (uWelcome > 0.001) {
+    vec3 ivory = vec3(0.91, 0.94, 0.86);
+    vec3 mint = vec3(0.46, 0.80, 0.61);
+    float lettering = uWelcome * (1.0 - smoothstep(0.0, 0.48, uWelcomeCollapse));
+    col = mix(col, mint, drawLabel(p, vec2(0.0, 0.32), 0.045, uLBrand) * lettering);
+    col = mix(col, ivory, drawLabel(p, vec2(0.0, 0.15), 0.108, uLHello) * lettering);
+    col = mix(col, ivory, drawLabel(p, vec2(0.0, 0.045), 0.108, uLButwal) * lettering);
+    // A restrained local route folds into the point before the device turns.
+    float extent = max(0.001, 1.0 - uWelcomeCollapse);
+    vec2 origin = vec2(0.06, -0.20);
+    vec2 a = origin + vec2(-0.20, 0.10) * extent;
+    vec2 b = origin + vec2(-0.11, 0.10) * extent;
+    vec2 c = origin + vec2(-0.11, 0.0) * extent;
+    vec2 d = origin;
+    float route = min(min(sdSegment(p, a, b), sdSegment(p, b, c)), sdSegment(p, c, d));
+    col = mix(col, mint * 0.85, (1.0 - smoothstep(0.001, 0.003, route)) * uWelcome);
+    float dot = length(p - origin);
+    col = mix(col, ivory, (1.0 - smoothstep(0.008, 0.012, dot)) * uWelcome);
+    col += mint * exp(-dot * 65.0) * 0.15 * uWelcome;
+    col = mix(col, mint, drawLabel(p, vec2(0.0, -0.31), 0.028, uLAmarpath) * lettering);
+  }
 
   // Payment: CASH / QR rows with a highlight that moves with scroll.
   if (uPayCard > 0.001) {
@@ -204,5 +247,6 @@ export function patchScreen(material: MeshStandardMaterial, uniforms: ScreenUnif
 }
 
 export function disposeScreen(uniforms: ScreenUniforms) {
+  disposed.add(uniforms);
   uniforms.uAtlas.value?.dispose();
 }

@@ -41,10 +41,10 @@ export default function PhoneCanvas({
       onCreated={capture ? ({ gl }) => exposeCapture(gl.domElement) : undefined}
     >
       <ContextGuard onLost={onLost} />
-      {monitor && <FrameBudget key={tier} />}
+      {monitor && <FrameBudget key={tier} visible={visible} />}
       <Suspense fallback={null}>
         {!capture && <Atmosphere quality={tier} initialFinish={initialFinish} />}
-        <StudioLights live={live} />
+        <StudioLights live={tier === "high" && live} />
         <PhoneModel tier={tier} initialFinish={initialFinish} captureFinish={captureFinish} onReady={onReady} />
       </Suspense>
     </Canvas>

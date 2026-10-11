@@ -14,6 +14,7 @@ import { film, scene as sceneState, setFilmLabel, setFilmScreen, setPhoneUv } fr
 import { createSharedWipe, createWipeColors, patchWipe, type SharedWipe, type WipeColors } from "./finish-wipe";
 import { applyLayers, buildLayers, disposeLayers, layerOffset, type LayerRig } from "./layers";
 import { createScreenUniforms, disposeScreen, patchScreen, type ScreenUniforms } from "./screen-ui";
+import { welcomeMotion } from "./welcome-motion";
 
 const ALUMINIUM = ["Anodized aluminum", "Metal tint"];
 const ANTENNA = ["Plastic antena"];
@@ -196,7 +197,7 @@ function frame({ state, delta, place, light, outline, rig, tier, look, capture }
   // Phones keep the device centred; the copy sits below it rather than beside it.
   x = MathUtils.lerp(x, mobile ? 0 : pose.x * vw, k);
   y = MathUtils.lerp(y, mobile ? vh * 0.17 : 0, k);
-  h = MathUtils.lerp(h, vh * (mobile ? 0.42 : 0.78), k) * MathUtils.lerp(1, pose.scale, k);
+  h = MathUtils.lerp(h, vh * (mobile ? 0.38 : 0.78), k) * MathUtils.lerp(1, mobile ? Math.min(pose.scale, 1.14) : pose.scale, k);
   place.scale.setScalar(h / rig.height);
 
   const sm = rig.smoothed;
@@ -248,6 +249,10 @@ function frame({ state, delta, place, light, outline, rig, tier, look, capture }
 
   // Screen story.
   const sc = rig.screen;
+  const welcome = welcomeMotion(k);
+  sc.uWelcome.value = capture ? 1 : welcome.opacity;
+  sc.uWelcomeCollapse.value = capture ? 0 : welcome.collapse;
+  sc.uFinishTint.value.set(from.aluminium).lerp(rig.aluminium.uTo.value, mix);
   sc.uPower.value = beats.power;
   sc.uPayCard.value = beats.payCard;
   sc.uPay.value = beats.pay;

@@ -7,8 +7,8 @@ import sharp from "sharp";
 const BASE = process.env.BASE_URL ?? "http://localhost:3000";
 const EDGE = process.env.EDGE_PATH ?? "C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe";
 const FINISHES = ["cosmic-orange", "deep-blue", "silver", "fallback"];
-const VERSION = "v1";
-const MAX_KB = 120;
+const VERSION = "v2";
+const MAX_KB = 90;
 
 fs.mkdirSync("public/renders", { recursive: true });
 const browser = await chromium.launch({

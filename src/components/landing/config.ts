@@ -8,7 +8,7 @@ export const MOTION = {
   cinematic: { min: 900, max: 1800, ease: "power3.inOut" },
 } as const;
 
-export const STILL_VERSION = "v1";
+export const STILL_VERSION = "v2";
 export const RENDERED_FINISHES = ["cosmic-orange", "deep-blue", "silver"];
 
 /** Pre-rendered still of the hero phone in a finish (poster, intro fallback, Low tier). */

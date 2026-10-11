@@ -62,7 +62,7 @@ void main() {
   float glow = exp(-dot(d, d) * mix(2.6, 7.0, uDark));
   col += mix(vec3(0.07, 0.45, 0.27), uTint, 0.22) * glow * 0.26;
   col *= 1.0 - uDark * 0.6;
-  float grain = (hash(vUv * uRes + fract(uTime * 0.71) * 311.0) - 0.5) * 0.035;
+  float grain = (hash(vUv * uRes) - 0.5) * 0.009;
   col = max(col + grain, 0.0);
   float alpha = clamp(max(col.r, max(col.g, col.b)) * 1.8, 0.0, 0.85);
   // The aurora disappears as white light takes over (moment 05).

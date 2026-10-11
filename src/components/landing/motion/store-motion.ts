@@ -1,4 +1,5 @@
 import { animate, createTimeline, stagger, svg, utils } from "animejs";
+import { bindVisit } from "./visit-motion";
 
 const reduced = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
@@ -180,7 +181,7 @@ function rollNumbers(numbers: HTMLElement[]) {
 /** Entrances (once), rail tilt + cursor light, smooth FAQ, rolling service numbers, drawn icons and pin. */
 export function bindStoreMotion(root: HTMLElement): () => void {
   if (reduced()) return () => {};
-  const cleanups: Array<() => void> = [];
+  const cleanups: Array<() => void> = [bindVisit(root)];
   const q = <T extends Element>(sel: string) => Array.from(root.querySelectorAll<T>(sel));
 
   const tiles = q<HTMLElement>(".rail-tile");

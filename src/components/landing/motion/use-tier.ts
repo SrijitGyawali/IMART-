@@ -6,6 +6,7 @@ import { capTier, decideTier, lowerTier, parseTier, readTierInput, readTierOverr
 const CAP_KEY = "imart-tier-cap";
 const listeners = new Set<() => void>();
 let cached: Tier | null = null;
+let memoryCap: Tier | null = null;
 
 function readCap(): Tier | null {
   try {
@@ -17,17 +18,18 @@ function readCap(): Tier | null {
 
 function compute(): Tier {
   const forced = readTierOverride(window.location.search);
-  // A failure cap (low) applies even to a forced tier; slow-frame caps never do.
-  const cap = readCap();
-  if (forced) return cap === "low" ? "low" : forced;
-  return capTier(decideTier(readTierInput(window)), cap);
+  if (forced) return forced;
+  const stored = readCap();
+  if (stored) memoryCap = capTier(stored, memoryCap);
+  return capTier(decideTier(readTierInput(window)), memoryCap);
 }
 
 function setCap(tier: Tier) {
+  memoryCap = capTier(tier, memoryCap);
   try {
-    sessionStorage.setItem(CAP_KEY, tier);
+    sessionStorage.setItem(CAP_KEY, memoryCap);
   } catch {}
-  cached = compute();
+  cached = capTier(cached ?? compute(), memoryCap);
   listeners.forEach((listener) => listener());
 }
 
@@ -44,7 +46,7 @@ export function stepDownTier() {
 
 /** The 3D failed (load error, render error, lost context): the Low presentation, in place. */
 export function dropToLowTier() {
-  if (cached === "low") return;
+  if (cached === "low" || isTierForced()) return;
   setCap("low");
 }
 

@@ -14,9 +14,16 @@ import {
 import PhoneLayer from "./three/phone-layer";
 import { PrecisionCursor } from "./cursor/precision-cursor";
 import "./landing.css";
+import "./hero/hero-welcome.css";
 
 type Stage = "hero" | "film" | "light";
 const noopSubscribe = () => () => {};
+const readReducedMotion = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+const subscribeReducedMotion = (notify: () => void) => {
+  const query = window.matchMedia("(prefers-reduced-motion: reduce)");
+  query.addEventListener("change", notify);
+  return () => query.removeEventListener("change", notify);
+};
 
 function trackPointer(root: HTMLElement): () => void {
   const smooth = { x: 0, y: 0 };
@@ -69,6 +76,8 @@ export function LandingExperience({
 }) {
   const rootRef = useRef<HTMLElement>(null);
   const tier = useTier();
+  const reducedMotion = useSyncExternalStore(subscribeReducedMotion, readReducedMotion, () => false);
+  const entrancePlayed = useRef(false);
   const captureId = useSyncExternalStore(noopSubscribe, () => readCapture(window.location.search), () => null);
   const captureFinish = captureId ? (parseFinishes(captureId.replace(/-/g, " "))[0] ?? null) : null;
   // Effects key off what they use, so a runtime step-down (high → mid → low) never replays anything.
@@ -113,6 +122,11 @@ export function LandingExperience({
       if (root) measureTile(root);
     };
     measure();
+    const resize = new ResizeObserver(measure);
+    resize.observe(slot);
+    if (root) resize.observe(root.querySelector(".hero-grid") ?? root);
+    let active = true;
+    document.fonts.ready.then(() => { if (active) measure(); });
     let timer = 0;
     const onResize = () => {
       window.clearTimeout(timer);
@@ -120,6 +134,8 @@ export function LandingExperience({
     };
     window.addEventListener("resize", onResize);
     return () => {
+      active = false;
+      resize.disconnect();
       window.removeEventListener("resize", onResize);
       window.clearTimeout(timer);
     };
@@ -152,38 +168,39 @@ export function LandingExperience({
   useEffect(() => {
     const root = rootRef.current;
     if (!ready || !root || captureId) return;
-    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (reducedMotion) {
+      document.documentElement.dataset.entrance = "done";
+      return;
+    }
     const cleanups: Array<() => void> = [];
     let started = false;
     const start = () => {
       if (started) return;
       started = true;
-      if (reduced) {
-        document.documentElement.dataset.entrance = "done";
-        return;
+      if (!entrancePlayed.current) {
+        entrancePlayed.current = true;
+        cleanups.push(playHeroEntrance(root));
       }
-      cleanups.push(playHeroEntrance(root));
       // Low tier never becomes ready, so this simply never fires there.
       cleanups.push(whenPhoneReady(root, () => playStudioSweep()));
     };
     const unsubscribe = subscribeBoot(start);
     if (isBootDone()) start();
-    if (!reduced) cleanups.push(bindHeroHandoff(root));
+    cleanups.push(bindHeroHandoff(root));
     // The light store comes alive on every tier; it is DOM-only and cheap.
-    if (!reduced) cleanups.push(bindStoreMotion(root));
+    cleanups.push(bindStoreMotion(root));
     return () => {
       unsubscribe();
       cleanups.forEach((cleanup) => cleanup());
     };
-  }, [ready, captureId]);
+  }, [ready, captureId, reducedMotion]);
 
   // The pinned film needs the live phone; Low tier (or a failed 3D) keeps the stacked, server-rendered acts.
   useEffect(() => {
     const root = rootRef.current;
-    if (!live3d || !root || captureId) return;
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    if (!live3d || !root || captureId || reducedMotion) return;
     return bindFilm(root);
-  }, [live3d, captureId]);
+  }, [live3d, captureId, reducedMotion]);
 
   return (
     <main

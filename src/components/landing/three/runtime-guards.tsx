@@ -26,13 +26,23 @@ const WARMUP_S = 4;
  * sample during warm-up (shader compiles), inside the film (never change quality mid-scene), or
  * while the tab is hidden; any of those clears the history.
  */
-export function FrameBudget() {
+export function FrameBudget({ visible }: { visible: boolean }) {
   const state = useRef({ age: 0, frames: 0, elapsed: 0, windows: [] as number[], done: false });
+  useEffect(() => {
+    const clear = () => {
+      state.current.frames = 0;
+      state.current.elapsed = 0;
+      state.current.windows.length = 0;
+    };
+    clear();
+    document.addEventListener("visibilitychange", clear);
+    return () => document.removeEventListener("visibilitychange", clear);
+  }, [visible]);
   useFrame((_, delta) => {
     const s = state.current;
     if (s.done) return;
     s.age += delta;
-    const paused = s.age < WARMUP_S || document.hidden || (film.progress > 0 && film.progress < 1);
+    const paused = !visible || s.age < WARMUP_S || document.hidden || (film.progress > 0 && film.progress < 1);
     if (paused || delta > 0.5) {
       s.frames = 0;
       s.elapsed = 0;

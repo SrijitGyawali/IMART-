@@ -72,6 +72,7 @@ function bindRoutePointer(root: HTMLElement): () => void {
   if (!section || !route || !window.matchMedia("(pointer: fine)").matches) return () => {};
   const target = { x: 0, y: 0 };
   const now = { x: 0, y: 0 };
+  const originalPath = route.getAttribute("d") ?? "";
   let frame = 0;
 
   const draw = () => {
@@ -81,6 +82,11 @@ function bindRoutePointer(root: HTMLElement): () => void {
     const my = (70 + now.y).toFixed(2);
     route.setAttribute("d", `M20 96 C 40 96, ${(44 + now.x).toFixed(2)} ${my}, ${mx} ${my} S 80 52, 84 40`);
     const settled = Math.abs(target.x - now.x) < 0.01 && Math.abs(target.y - now.y) < 0.01;
+    if (settled && target.x === 0 && target.y === 0) {
+      now.x = 0;
+      now.y = 0;
+      route.setAttribute("d", originalPath);
+    }
     frame = settled ? 0 : requestAnimationFrame(draw);
   };
   const wake = () => {
@@ -110,6 +116,7 @@ function bindRoutePointer(root: HTMLElement): () => void {
     section.removeEventListener("pointermove", move);
     section.removeEventListener("pointerleave", leave);
     cancelAnimationFrame(frame);
+    route.setAttribute("d", originalPath);
   };
 }
 

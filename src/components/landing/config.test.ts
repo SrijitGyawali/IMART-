@@ -3,9 +3,9 @@ import assert from "node:assert/strict";
 import { readCapture, stillUrl } from "./config.ts";
 
 test("stillUrl maps rendered finishes and falls back", () => {
-  assert.equal(stillUrl("deep-blue"), "/renders/hero-deep-blue.v1.webp");
-  assert.equal(stillUrl("sage"), "/renders/hero-fallback.v1.webp");
-  assert.equal(stillUrl(null), "/renders/hero-fallback.v1.webp");
+  assert.equal(stillUrl("deep-blue"), "/renders/hero-deep-blue.v2.webp");
+  assert.equal(stillUrl("sage"), "/renders/hero-fallback.v2.webp");
+  assert.equal(stillUrl(null), "/renders/hero-fallback.v2.webp");
 });
 
 test("readCapture only activates with capture=1", () => {
