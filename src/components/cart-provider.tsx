@@ -1,15 +1,53 @@
 "use client";
 
-import {
-  createContext,
-  useContext,
-  useEffect,
-  useMemo,
-  useState,
-} from "react";
+import { createContext, useContext, useMemo, useSyncExternalStore } from "react";
 import type { CartItem } from "@/lib/types";
 
 const STORAGE_KEY = "imart-cart";
+const EMPTY: CartItem[] = [];
+
+// The cart lives in localStorage; this small store keeps every subscriber (and other tabs) in sync.
+const listeners = new Set<() => void>();
+let cached: CartItem[] | null = null;
+
+function readCart(): CartItem[] {
+  if (cached) return cached;
+  try {
+    const parsed: unknown = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? "[]");
+    cached = Array.isArray(parsed) ? (parsed as CartItem[]) : EMPTY;
+  } catch {
+    cached = EMPTY; // corrupted cart — start fresh
+  }
+  return cached;
+}
+
+function writeCart(next: CartItem[]) {
+  cached = next;
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+  } catch {
+    // storage full or blocked — the cart still works for this page view
+  }
+  listeners.forEach((listener) => listener());
+}
+
+const updateCart = (change: (items: CartItem[]) => CartItem[]) => writeCart(change(readCart()));
+
+function subscribe(listener: () => void) {
+  listeners.add(listener);
+  const onStorage = (e: StorageEvent) => {
+    if (e.key !== STORAGE_KEY) return;
+    cached = null;
+    listener();
+  };
+  window.addEventListener("storage", onStorage);
+  return () => {
+    listeners.delete(listener);
+    window.removeEventListener("storage", onStorage);
+  };
+}
+
+const noopSubscribe = () => () => {};
 
 interface CartContextValue {
   items: CartItem[];
@@ -22,62 +60,42 @@ interface CartContextValue {
   hydrated: boolean;
 }
 
+const actions = {
+  addItem: (item: Omit<CartItem, "quantity">, quantity = 1) =>
+    updateCart((prev) => {
+      const existing = prev.find((i) => i.productId === item.productId);
+      if (existing) {
+        return prev.map((i) => (i.productId === item.productId ? { ...i, quantity: i.quantity + quantity } : i));
+      }
+      return [...prev, { ...item, quantity }];
+    }),
+  removeItem: (productId: string) => updateCart((prev) => prev.filter((i) => i.productId !== productId)),
+  setQuantity: (productId: string, quantity: number) =>
+    updateCart((prev) =>
+      quantity <= 0
+        ? prev.filter((i) => i.productId !== productId)
+        : prev.map((i) => (i.productId === productId ? { ...i, quantity } : i)),
+    ),
+  clear: () => writeCart(EMPTY),
+};
+
 const CartContext = createContext<CartContextValue | null>(null);
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
-  const [items, setItems] = useState<CartItem[]>([]);
-  const [hydrated, setHydrated] = useState(false);
+  const items = useSyncExternalStore(subscribe, readCart, () => EMPTY);
+  // False during server render and hydration, true once the saved cart has been read.
+  const hydrated = useSyncExternalStore(noopSubscribe, () => true, () => false);
 
-  useEffect(() => {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) setItems(JSON.parse(raw));
-    } catch {
-      // corrupted cart — start fresh
-    }
-    setHydrated(true);
-  }, []);
-
-  useEffect(() => {
-    if (hydrated) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
-    }
-  }, [items, hydrated]);
-
-  const value = useMemo<CartContextValue>(() => {
-    const count = items.reduce((sum, i) => sum + i.quantity, 0);
-    const total = items.reduce((sum, i) => sum + i.price * i.quantity, 0);
-
-    return {
+  const value = useMemo<CartContextValue>(
+    () => ({
       items,
-      count,
-      total,
+      count: items.reduce((sum, i) => sum + i.quantity, 0),
+      total: items.reduce((sum, i) => sum + i.price * i.quantity, 0),
       hydrated,
-      addItem: (item, quantity = 1) =>
-        setItems((prev) => {
-          const existing = prev.find((i) => i.productId === item.productId);
-          if (existing) {
-            return prev.map((i) =>
-              i.productId === item.productId
-                ? { ...i, quantity: i.quantity + quantity }
-                : i
-            );
-          }
-          return [...prev, { ...item, quantity }];
-        }),
-      removeItem: (productId) =>
-        setItems((prev) => prev.filter((i) => i.productId !== productId)),
-      setQuantity: (productId, quantity) =>
-        setItems((prev) =>
-          quantity <= 0
-            ? prev.filter((i) => i.productId !== productId)
-            : prev.map((i) =>
-                i.productId === productId ? { ...i, quantity } : i
-              )
-        ),
-      clear: () => setItems([]),
-    };
-  }, [items, hydrated]);
+      ...actions,
+    }),
+    [items, hydrated],
+  );
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
 }

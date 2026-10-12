@@ -19,18 +19,6 @@ export async function getSuppliers(): Promise<Supplier[]> {
   return data ?? [];
 }
 
-export async function getFeaturedProducts(): Promise<Product[]> {
-  const supabase = await createClient();
-  const { data } = await supabase
-    .from("products")
-    .select("*")
-    .eq("active", true)
-    .eq("featured", true)
-    .order("created_at", { ascending: false })
-    .limit(8);
-  return data ?? [];
-}
-
 export interface ProductFilters {
   categorySlug?: string;
   brandSlug?: string;

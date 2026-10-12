@@ -48,7 +48,6 @@ export function PosClient({
   const [taxRate, setTaxRate] = useState(0);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("cash");
   const [amountPaid, setAmountPaid] = useState(0);
-  const [notes, setNotes] = useState("");
 
   const searchResults = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -155,7 +154,7 @@ export function PosClient({
         taxRate,
         paymentMethod,
         amountPaid,
-        notes,
+        notes: "",
         items: cart.map((l) => ({
           productId: l.productId,
           productName: l.productName,

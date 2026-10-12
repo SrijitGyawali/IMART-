@@ -121,5 +121,3 @@ export function filmBeats(p: number) {
     land: ramp(p, 0.95, 1),
   };
 }
-
-export type Beats = ReturnType<typeof filmBeats>;

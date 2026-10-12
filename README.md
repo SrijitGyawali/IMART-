@@ -7,7 +7,10 @@ built with Next.js (App Router), TypeScript, Tailwind CSS, and Supabase.
 
 - **Next.js 16** (App Router, Turbopack) + React 19
 - **Supabase** — Postgres, Auth, Storage
-- **Tailwind CSS 4** for styling, **Framer Motion** + **Lenis** for motion/scroll
+- **Tailwind CSS 4** for styling
+- Home page motion: **GSAP** + ScrollTrigger (scroll film, transitions), **Three.js** via
+  React Three Fiber / Drei (the 3D phone), **Anime.js** (UI and entrance motion),
+  **StringTune** (smooth scroll, magnetic buttons, parallax)
 - **Zod** for form/server-action validation
 
 ## Getting started
@@ -29,7 +32,8 @@ src/
   app/
     (store)/        # public storefront — home, products, cart, checkout
     admin/           # staff back office (Supabase-Auth gated)
-  components/        # shared UI: navbar, footer, cart, product card, motion helpers
+  components/        # shared UI: navbar, footer, cart, product card
+    landing/         # the cinematic home page: 3D phone, scroll film, store sections
   lib/
     supabase/        # browser/server/service Supabase clients
     types.ts         # shared TypeScript types mirroring the DB schema
@@ -38,6 +42,17 @@ src/
     format.ts         # price/invoice/order number formatting
 supabase/
   migrations/         # hand-run SQL migrations, numbered in order
+scripts/              # build the optimized phone model and render its fallback stills
+e2e/                  # browser checks for the home page and the shopping flow
+```
+
+## Checks
+
+```bash
+npm run lint && npx tsc --noEmit   # lint + types
+npm test                           # unit tests (pure landing logic)
+npm run build && npm run start     # then, in another terminal:
+npm run e2e                        # browser checks (needs Microsoft Edge; never submits an order)
 ```
 
 ## What's implemented
