@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { getProductBySlug, getProductGroupSiblings } from "@/lib/queries";
-import { formatPrice } from "@/lib/format";
+import { formatColors, formatPrice, formatStorage } from "@/lib/format";
 import { AddToCart } from "@/components/add-to-cart";
 import { VariantPicker } from "@/components/variant-picker";
 import { ProductGallery } from "@/components/product-gallery";
@@ -23,7 +23,7 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
   if (!product) notFound();
   const siblings = product.product_group_id ? await getProductGroupSiblings(product.product_group_id, product.id) : [];
   const variantOptions = siblings.length ? [product, ...siblings].map(p => ({ slug: p.slug, color: p.color ?? "", storage: p.storage ?? "" })) : [];
-  const specs = [["Colour", product.color], ["Storage", product.storage], ["RAM", product.ram]].filter(([, value]) => value);
+  const specs = [["Colour", formatColors(product.color)], ["Storage", formatStorage(product.storage)], ["RAM", formatStorage(product.ram)]].filter(([, value]) => value);
   // Keep internal purchase and supplier information out of client props.
   const cartProduct = { id: product.id, name: product.name, slug: product.slug, price: product.price, images: product.images, stock: product.stock };
 

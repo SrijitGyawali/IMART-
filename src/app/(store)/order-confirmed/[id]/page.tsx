@@ -45,7 +45,7 @@ export default async function OrderConfirmedPage({
 
   return (
     <main className="mx-auto flex w-full max-w-xl flex-1 flex-col items-center px-4 pt-16 text-center">
-      <div className="iridescent-ring flex h-16 w-16 items-center justify-center rounded-full">
+      <div className="flex h-16 w-16 items-center justify-center rounded-full border-2 border-accent bg-accent/10 text-accent">
         <svg
           width="28"
           height="28"
@@ -123,13 +123,13 @@ export default async function OrderConfirmedPage({
         href={`https://wa.me/977${whatsapp}?text=${message}`}
         target="_blank"
         rel="noopener noreferrer"
-        className="mt-8 w-full rounded-full bg-[#25D366] py-3 text-sm font-semibold text-black transition hover:opacity-90"
+        className="mt-8 w-full rounded-md bg-[#25D366] py-3 text-sm font-semibold text-black transition hover:opacity-90"
       >
         Message us on WhatsApp
       </a>
       <Link
         href="/products"
-        className="mb-16 mt-3 w-full rounded-full border border-border py-3 text-sm font-semibold transition hover:bg-surface"
+        className="mb-16 mt-3 w-full rounded-md border border-border py-3 text-sm font-semibold transition hover:bg-surface"
       >
         Continue shopping
       </Link>

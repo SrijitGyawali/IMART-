@@ -1,10 +1,4 @@
 .storefront {
-  --accent: #176b48;
-  --text: #202722;
-  --muted: #67716a;
-  --border: #e4e8e3;
-  --surface: #f5f7f4;
-  --gradient: linear-gradient(135deg, #176b48, #176b48);
   display: flex;
   min-height: 100vh;
   flex-direction: column;
@@ -93,7 +87,6 @@
 .footer-columns .footer-contact > .footer-phone { font-size: 17px; color: var(--text); font-weight: 600; }
 .footer-bottom { display: flex; align-items: center; justify-content: space-between; gap: 15px; padding-block: 22px; border-top: 1px solid var(--border); font-size: 10px; color: var(--muted); }
 .footer-bottom > div { display: flex; align-items: center; gap: 10px; }
-.storefront .btn-primary { box-shadow: none; background: var(--accent); }
 .store-empty { padding: 50px 20px; text-align: center; background: var(--surface); border-radius: 8px; }
 .store-empty h3 { font-size: 19px; font-weight: 600; }
 .store-empty p { font-size: 12px; margin: 10px 0 20px; color: var(--muted); }
@@ -131,7 +124,6 @@
 .detail-specs span { font-size: 11px; padding: 8px 11px; border: 1px solid var(--border); border-radius: 5px; }
 .detail-specs small { color: var(--muted); margin-right: 6px; }
 .detail-buy { margin-top: 28px; }
-.detail-buy button { border-radius: 6px; }
 .detail-promises { border-top: 1px solid var(--border); margin-top: 28px; padding-top: 20px; display: grid; gap: 13px; }
 .detail-promises p { display: flex; align-items: center; gap: 10px; color: var(--muted); font-size: 11px; }
 .detail-promises svg { color: var(--accent); width: 18px; }

@@ -30,7 +30,7 @@ export default function CheckoutPage() {
         </h1>
         <Link
           href="/products"
-          className="mt-6 rounded-full bg-accent px-6 py-2.5 text-sm font-semibold text-white transition hover:opacity-90"
+          className="mt-6 rounded-md bg-accent px-6 py-2.5 text-sm font-semibold text-white transition hover:opacity-90"
         >
           Shop products
         </Link>
@@ -236,7 +236,7 @@ export default function CheckoutPage() {
         <button
           type="submit"
           disabled={pending}
-          className="btn-primary w-full rounded-full py-3 text-sm font-semibold text-white disabled:opacity-50"
+          className="btn-primary w-full rounded-md py-3 text-sm font-semibold text-white disabled:opacity-50"
         >
           {pending ? "Placing order…" : `Place order — ${formatPrice(total)}`}
         </button>

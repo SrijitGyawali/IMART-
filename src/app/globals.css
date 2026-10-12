@@ -1,13 +1,14 @@
 @import "tailwindcss";
 
+/* iMart palette, shared by the storefront and the admin. */
 :root {
-  --bg: #FFFFFF;
-  --surface: #F5F5F7;
-  --border: #E3E3E8;
-  --text: #1D1D1F;
-  --muted: #6E6E73;
-  --accent: #0071E3;
-  --gradient: linear-gradient(135deg, #007AFF, #AF52DE, #FF375F);
+  --bg: #ffffff;
+  --surface: #f5f7f4;
+  --border: #e4e8e3;
+  --text: #202722;
+  --muted: #67716a;
+  --accent: #176b48;
+  --accent-strong: #11553a;
 }
 
 @theme inline {
@@ -32,42 +33,20 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* Iridescent text — used only on product detail price */
-.iridescent-text {
-  background: var(--gradient);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
-/* Iridescent ring — used only on order-confirmed checkmark */
-.iridescent-ring {
-  border: 2px solid transparent;
-  background: linear-gradient(var(--surface), var(--surface)) padding-box,
-    var(--gradient) border-box;
-}
-
-/* Premium primary button — gradient fill, inner highlight, lifted glow */
+/* Primary action: solid brand green, a touch darker on hover. */
 .btn-primary {
-  background: linear-gradient(to bottom, #1580f0, #0064d0);
-  box-shadow:
-    0 8px 20px -6px rgba(0, 113, 227, 0.55),
-    inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  background: var(--accent);
   transition:
-    transform 0.15s ease,
-    box-shadow 0.2s ease,
-    filter 0.2s ease;
+    background-color 0.2s ease,
+    transform 0.15s ease;
 }
 
-.btn-primary:hover {
-  filter: brightness(1.07);
-  box-shadow:
-    0 12px 28px -6px rgba(0, 113, 227, 0.6),
-    inset 0 1px 0 rgba(255, 255, 255, 0.25);
+.btn-primary:hover:not(:disabled) {
+  background: var(--accent-strong);
 }
 
-.btn-primary:active {
-  transform: scale(0.97);
+.btn-primary:active:not(:disabled) {
+  transform: scale(0.98);
 }
 
 /* Visible, on-brand keyboard focus */

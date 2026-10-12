@@ -14,7 +14,7 @@ export function AddToCart({ product }: { product: Pick<Product, "id" | "name" | 
     return (
       <button
         disabled
-        className="w-full cursor-not-allowed rounded-full bg-surface py-3 text-sm font-semibold text-muted"
+        className="w-full cursor-not-allowed rounded-md bg-surface py-3 text-sm font-semibold text-muted"
       >
         Out of stock
       </button>
@@ -48,13 +48,13 @@ export function AddToCart({ product }: { product: Pick<Product, "id" | "name" | 
     <div className="flex flex-col gap-3">
       <button
         onClick={handleBuyNow}
-        className="btn-primary w-full rounded-full py-3 text-sm font-semibold text-white"
+        className="btn-primary w-full rounded-md py-3 text-sm font-semibold text-white"
       >
         Buy Now
       </button>
       <button
         onClick={handleAdd}
-        className="w-full rounded-full border border-border py-3 text-sm font-semibold transition hover:bg-surface"
+        className="w-full rounded-md border border-border py-3 text-sm font-semibold transition hover:bg-surface"
       >
         {added ? "Added ✓" : "Add to Cart"}
       </button>

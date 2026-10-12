@@ -1,6 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
-import { formatPrice } from "@/lib/format";
+import { formatPrice, formatVariant } from "@/lib/format";
 import type { Product } from "@/lib/types";
 import { StoreIcon } from "./store-icon";
 
@@ -14,7 +14,7 @@ export function ProductCard({ product }: { product: Product }) {
       <div className="shop-product-content">
         <p className={"product-availability " + (product.stock <= 0 ? "unavailable" : "")}>{product.stock > 0 ? "In stock" : "Out of stock"}</p>
         <h3>{product.name}</h3>
-        <p className="product-variant">{[product.color, product.storage].filter(Boolean).join(" · ") || "Explore the details"}</p>
+        <p className="product-variant">{formatVariant(product.color, product.storage) || "Explore the details"}</p>
         <div className="product-card-bottom"><strong>{formatPrice(product.price)}</strong><span aria-hidden="true"><StoreIcon name="arrow" width={17} /></span></div>
       </div>
     </Link>
