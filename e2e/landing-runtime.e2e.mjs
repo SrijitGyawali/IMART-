@@ -1,9 +1,9 @@
 // Runtime regressions against a running production build. Does not submit orders or messages.
-// Run: BASE_URL=http://localhost:3112 node e2e/landing-runtime.e2e.mjs
+// Run: BASE_URL=http://localhost:3000 node e2e/landing-runtime.e2e.mjs
 import fs from "node:fs";
 import { chromium } from "playwright-core";
 
-const BASE = process.env.BASE_URL ?? "http://localhost:3112";
+const BASE = process.env.BASE_URL ?? "http://localhost:3000";
 const OUT = "e2e/.artifacts/welcome/runtime";
 fs.mkdirSync(OUT, { recursive: true });
 

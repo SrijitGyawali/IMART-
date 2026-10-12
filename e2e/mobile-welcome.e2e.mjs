@@ -2,7 +2,7 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { chromium } from 'playwright-core';
-const BASE=process.env.BASE_URL??'http://localhost:3112';
+const BASE=process.env.BASE_URL??'http://localhost:3000';
 const OUT='e2e/.artifacts/welcome';fs.mkdirSync(OUT,{recursive:true});
 const browser=await chromium.launch({channel:'msedge',headless:true,args:['--use-angle=d3d11','--enable-gpu','--ignore-gpu-blocklist']});
 let checks=0;
