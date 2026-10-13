@@ -92,10 +92,10 @@ html[data-entrance="pending"] .hero-copy > * { opacity: 0; animation: landing-re
 
 /* ---------- Depth planes (pointer, desktop high tier) ----------
    GSAP folds CSS `translate` into its own transforms on elements it tweens (.hero-word, .hero-copy),
-   so depth offsets live on children GSAP never touches. */
-.hero-word-inner { display: block; translate: calc(var(--px, 0) * -6px) calc(var(--py, 0) * -4px); }
+   so the pointer's depth offsets (inline `translate`, set by trackPointer) live on children GSAP
+   never touches: .hero-word-inner and each child of .hero-copy. */
+.hero-word-inner { display: block; }
 .hero-copy { transform-origin: left center; }
-.hero-copy > * { translate: calc(var(--px, 0) * 2px) calc(var(--py, 0) * 2px); }
 .hero-device-slot { touch-action: pan-y; }
 
 /* ---------- Magnetic CTAs (StringTune writes --magnetic-x/y in px) ---------- */

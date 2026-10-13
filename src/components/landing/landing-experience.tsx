@@ -4,7 +4,7 @@ import { useEffect, useRef, useSyncExternalStore } from "react";
 import { parseFinishes, type Finish } from "./data";
 import { readCapture } from "./config";
 import { dropToLowTier, useTier } from "./motion/use-tier";
-import { acquireStringTune } from "./motion/string-tune";
+import { startStringTune } from "./motion/string-tune";
 import { bindHeroHandoff, playHeroEntrance, playStudioSweep, whenPhoneReady } from "./motion/hero-motion";
 import { bindFilm } from "./motion/film";
 import { bindStoreMotion } from "./motion/store-motion";
@@ -26,26 +26,36 @@ const subscribeReducedMotion = (notify: () => void) => {
 };
 
 function trackPointer(root: HTMLElement): () => void {
+  // Depth planes drift against the pointer, each by its own amplitude (px at the screen edge).
+  // Writing `translate` straight onto the planes restyles just those elements; a custom property on
+  // a shared ancestor would restyle everything beneath it (every split-text glyph) on each move.
+  const planes = [
+    ...Array.from(root.querySelectorAll<HTMLElement>(".hero-word-inner"), (el) => ({ el, ax: -6, ay: -4 })),
+    ...Array.from(root.querySelectorAll<HTMLElement>(".hero-copy > *"), (el) => ({ el, ax: 2, ay: 2 })),
+  ];
   const smooth = { x: 0, y: 0 };
   let frame = 0;
+  const tick = () => {
+    smooth.x += (scene.pointer.x - smooth.x) * 0.08;
+    smooth.y += (scene.pointer.y - smooth.y) * 0.08;
+    for (const { el, ax, ay } of planes) {
+      el.style.translate = `${(smooth.x * ax).toFixed(2)}px ${(smooth.y * ay).toFixed(2)}px`;
+    }
+    // Sleep once the planes have caught up with the pointer; the next move wakes the loop.
+    const settled = Math.abs(scene.pointer.x - smooth.x) < 0.001 && Math.abs(scene.pointer.y - smooth.y) < 0.001;
+    frame = settled ? 0 : requestAnimationFrame(tick);
+  };
   const onMove = (e: PointerEvent) => {
     if (e.pointerType !== "mouse") return;
     scene.pointer.x = (e.clientX / window.innerWidth) * 2 - 1;
     scene.pointer.y = (e.clientY / window.innerHeight) * 2 - 1;
-  };
-  // Depth planes read these; each plane multiplies by its own amplitude in CSS.
-  const tick = () => {
-    smooth.x += (scene.pointer.x - smooth.x) * 0.08;
-    smooth.y += (scene.pointer.y - smooth.y) * 0.08;
-    root.style.setProperty("--px", smooth.x.toFixed(4));
-    root.style.setProperty("--py", smooth.y.toFixed(4));
-    frame = requestAnimationFrame(tick);
+    if (!frame) frame = requestAnimationFrame(tick);
   };
   window.addEventListener("pointermove", onMove, { passive: true });
-  frame = requestAnimationFrame(tick);
   return () => {
     window.removeEventListener("pointermove", onMove);
     cancelAnimationFrame(frame);
+    for (const { el } of planes) el.style.removeProperty("translate");
     scene.pointer.x = 0;
     scene.pointer.y = 0;
   };
@@ -141,21 +151,11 @@ export function LandingExperience({
     };
   }, []);
 
-  // Smooth scroll on desktop with a fine pointer; native everywhere else.
+  // Magnetic buttons and parallax (StringTune); scrolling itself stays native everywhere.
   useEffect(() => {
     if (!ready || captureId) return;
-    const smooth = live3d && window.matchMedia("(pointer: fine)").matches;
-    let release: (() => void) | null = null;
-    let cancelled = false;
-    acquireStringTune(smooth).then((r) => {
-      if (cancelled) r();
-      else release = r;
-    });
-    return () => {
-      cancelled = true;
-      release?.();
-    };
-  }, [ready, live3d, captureId]);
+    startStringTune();
+  }, [ready, captureId]);
 
   // Pointer: phone reaction + depth planes (desktop, high tier).
   useEffect(() => {

@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 import { filmBeats } from "./film-timeline";
 import { SCREEN_ASPECT, STREETS } from "./streets";
 import { film } from "../scene-store";
+import { loopWhileInView } from "./loop-in-view";
 
 type Segment = [number, number, number, number];
 
@@ -66,16 +67,12 @@ export function EscapeLines() {
     const onResize = () => {
       guides = measureGuides();
     };
-    let frame = 0;
-    const tick = () => {
-      draw(svg, lines, guides);
-      frame = requestAnimationFrame(tick);
-    };
     window.addEventListener("resize", onResize);
-    frame = requestAnimationFrame(tick);
+    // Only while the film is on screen: the lines exist for the end of the film alone.
+    const stop = loopWhileInView(svg.closest(".landing-film") ?? svg, () => draw(svg, lines, guides));
     return () => {
       window.removeEventListener("resize", onResize);
-      cancelAnimationFrame(frame);
+      stop();
     };
   }, []);
   return (

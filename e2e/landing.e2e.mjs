@@ -70,7 +70,8 @@ check("tier is high on desktop", (await attr(d, "data-tier")) === "high");
 check("header is transparent over the dark stage", (await headerBg(d)) === "rgba(0, 0, 0, 0)", await headerBg(d));
 await d.locator("main.landing[data-phone='ready']").waitFor({ timeout: 30000 }).catch(() => {});
 check("3D phone becomes ready", (await attr(d, "data-phone")) === "ready", await attr(d, "data-phone"));
-check("smooth scroll on desktop", (await htmlScroll(d)) === "smooth", String(await htmlScroll(d)));
+// Scrolling is native everywhere (compositor-driven); StringTune only runs magnetic + parallax.
+check("native scroll on desktop", (await htmlScroll(d)) === "native", String(await htmlScroll(d)));
 check("no horizontal scroll (1440px)", await noHorizontalScroll(d));
 await d.waitForTimeout(1800);
 await d.screenshot({ path: `${OUT}/p2-hero-desktop.png` });
@@ -155,7 +156,7 @@ const guide = await d.evaluate(() => ({
 check("transition: lines land on the rail's edges", Math.abs(guide.x1 - guide.tile) < 2, `x1=${guide.x1} tile=${guide.tile.toFixed(1)}`);
 await d.screenshot({ path: `${OUT}/p4-guides-100.png` });
 
-// Anchor navigation must work with smooth scroll on (navbar/footer link to /#help).
+// Anchor navigation (navbar/footer link to /#help).
 await d.locator('.store-footer a[href="/#help"]').first().click();
 await d.waitForTimeout(2500);
 const helpTop = await d.locator("#help").evaluate((el) => el.getBoundingClientRect().top);
@@ -213,15 +214,14 @@ check("store: FAQ closes", !(await firstFaq.evaluate((el) => el.open)));
 await reveal(".visit-body", 2200);
 check("store: visit pin drawn", (await opacities(".visit-pin-dot"))[0] === 1);
 
-// Leaving the landing turns smooth scroll off; coming back turns it on again.
+// Leaving the landing and coming back keeps scrolling native and the landing working.
 await d.locator(".showcase-grid .shop-product").first().click();
 await d.waitForURL(/\/products\//, { timeout: 15000 });
 await d.waitForTimeout(500);
-check("smooth scroll off after leaving the landing", (await htmlScroll(d)) === "native", String(await htmlScroll(d)));
 check("other pages keep the normal header", (await d.locator(".store-header[data-landing]").count()) === 0);
 await d.goBack({ waitUntil: "networkidle" });
 await d.waitForTimeout(800);
-check("smooth scroll back on after returning", (await htmlScroll(d)) === "smooth", String(await htmlScroll(d)));
+check("native scroll after returning", (await htmlScroll(d)) === "native", String(await htmlScroll(d)));
 
 // Second visit in the same session: no boot.
 await d.goto(BASE + "/", { waitUntil: "domcontentloaded" });

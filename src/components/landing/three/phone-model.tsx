@@ -4,8 +4,8 @@ import { useLayoutEffect, useRef } from "react";
 import { useFrame, type RootState } from "@react-three/fiber";
 import { useGLTF } from "@react-three/drei";
 import {
-  Box3, CanvasTexture, Group, MathUtils, Matrix4, Mesh, MeshStandardMaterial, PointLight,
-  Quaternion, SRGBColorSpace, Vector3,
+  Box3, CanvasTexture, DoubleSide, Group, MathUtils, Matrix4, Mesh, MeshStandardMaterial, PointLight,
+  Quaternion, SRGBColorSpace, Vector3, type Material,
 } from "three";
 import { MODEL_URL, STILL_FILL } from "../config";
 import { FALLBACK_FINISH, type Finish } from "../data";
@@ -151,7 +151,22 @@ function buildRig(model: Group, orient: Group, centre: Group): Rig {
   for (const m of materialsNamed(model, ANTENNA)) patchWipe(m, rig.shared, rig.antenna);
   for (const m of materialsNamed(model, BACK_GLASS)) patchWipe(m, rig.shared, rig.glass);
   prepareScreen(materialsNamed(model, ["OLED"]), screen);
+  drawGlassInOnePass(model);
   return rig;
+}
+
+/**
+ * three.js draws a transparent double-sided material twice per frame (back faces, then front) and
+ * flags it needsUpdate before each pass, which re-resolves its shader every frame. The phone's
+ * eight glass/lens materials are thin panels, so one pass looks the same and costs far less.
+ */
+function drawGlassInOnePass(root: Group) {
+  root.traverse((object) => {
+    if (!(object instanceof Mesh)) return;
+    for (const material of ([] as Material[]).concat(object.material)) {
+      if (material.transparent && material.side === DoubleSide) material.forceSinglePass = true;
+    }
+  });
 }
 
 const projected = new Vector3();
@@ -354,6 +369,10 @@ export function PhoneModel({
     if (!r.ready) {
       r.ready = true;
       onReady();
+      // The film's hidden internals (battery, logic board, scan) would otherwise compile their
+      // shaders the moment they first appear, freezing the scroll mid-film. Compile everything now,
+      // off the critical path, with the same lights and environment the film will render with.
+      state.gl.compileAsync(state.scene, state.camera).catch(() => {});
     }
   });
 

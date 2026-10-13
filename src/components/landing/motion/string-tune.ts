@@ -1,50 +1,30 @@
 import type { StringTune } from "@fiddle-digital/string-tune";
-import { getGsap } from "./gsap";
 
-// StringTune is a singleton whose destroy() tears down its scroll engine for good,
-// so it is started once per page load and only switched between smooth and native.
-let instance: StringTune | null = null;
+// StringTune is a singleton whose destroy() tears down its engine for good, so it is started
+// once per page load and shared by every caller.
+//
+// Scrolling stays native on every device. JS smooth scrolling made the browser finish style and
+// layout on the main thread before every scroll step and re-raster page tiles each frame; on this
+// WebGL-heavy page that cost ~40% more main-thread time in the film and made the page trail the
+// wheel. Native scrolling runs on the compositor, and the film keeps its easing from GSAP's scrub.
 let booting: Promise<StringTune> | null = null;
-let users = 0;
 
 async function boot(): Promise<StringTune> {
   const mod = await import("@fiddle-digital/string-tune");
   const st = mod.StringTune.getInstance();
+  // Only the modules the markup uses (data-string="parallax" | "magnetic"): every registered
+  // module does work on each scroll and pointer frame, used or not.
   st.use(mod.StringParallax);
   st.use(mod.StringMagnetic);
-  st.use(mod.StringSplit);
-  st.use(mod.StringCursor);
-  st.use(mod.StringSpotlight);
-  st.use(mod.StringTilt);
-  st.use(mod.StringProgress);
   st.scrollMobileMode = "default";
   st.scrollDesktopMode = "default";
-  // StringTune writes the real scroll position; keep ScrollTrigger in the same frame.
-  const { ScrollTrigger } = getGsap();
-  st.on("scroll", () => ScrollTrigger.update());
   st.start(0);
   return st;
 }
 
-/** Turns smooth scrolling on (desktop) for as long as the caller holds it. */
-export async function acquireStringTune(smooth: boolean): Promise<() => void> {
-  users += 1;
-  if (!instance) {
-    booting ??= boot();
-    instance = await booting;
-  }
-  const st = instance;
-  st.scrollDesktopMode = smooth ? "smooth" : "default";
-  document.documentElement.dataset.scroll = smooth ? "smooth" : "native";
-
-  let released = false;
-  return () => {
-    if (released) return;
-    released = true;
-    users -= 1;
-    if (users === 0) {
-      st.scrollDesktopMode = "default";
-      document.documentElement.dataset.scroll = "native";
-    }
-  };
+/** Starts StringTune (magnetic buttons, parallax) once; later calls reuse the running instance. */
+export async function startStringTune(): Promise<void> {
+  booting ??= boot();
+  await booting;
+  document.documentElement.dataset.scroll = "native";
 }
