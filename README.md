@@ -42,17 +42,16 @@ src/
     format.ts         # price/invoice/order number formatting
 supabase/
   migrations/         # hand-run SQL migrations, numbered in order
-scripts/              # build the optimized phone model and render its fallback stills
-e2e/                  # browser checks for the home page and the shopping flow
+public/
+  models/             # optimized 3D phone model
+  renders/            # pre-rendered phone stills (poster and low-power fallback)
 ```
 
 ## Checks
 
 ```bash
 npm run lint && npx tsc --noEmit   # lint + types
-npm test                           # unit tests (pure landing logic)
-npm run build && npm run start     # then, in another terminal:
-npm run e2e                        # browser checks (needs Microsoft Edge; never submits an order)
+npm run build                      # production build
 ```
 
 ## What's implemented

@@ -53,6 +53,3 @@ next-env.d.ts
 
 # 3D source assets (large originals; optimized outputs live in public/)
 /assets-src/
-
-# e2e screenshots
-/e2e/.artifacts/
