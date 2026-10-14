@@ -24,7 +24,6 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
   const siblings = product.product_group_id ? await getProductGroupSiblings(product.product_group_id, product.id) : [];
   const variantOptions = siblings.length ? [product, ...siblings].map(p => ({ slug: p.slug, color: p.color ?? "", storage: p.storage ?? "" })) : [];
   const specs = [["Colour", formatColors(product.color)], ["Storage", formatStorage(product.storage)], ["RAM", formatStorage(product.ram)]].filter(([, value]) => value);
-  // Keep internal purchase and supplier information out of client props.
   const cartProduct = { id: product.id, name: product.name, slug: product.slug, price: product.price, images: product.images, stock: product.stock };
 
   return (

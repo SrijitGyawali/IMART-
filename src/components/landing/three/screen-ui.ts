@@ -46,7 +46,6 @@ const ATLAS_H = 1024;
 const ROW = 64;
 const disposed = new WeakSet<ScreenUniforms>();
 
-/** White labels on transparent, drawn once in the site font. Rects are [x, y(top), w, h] in 0..1. */
 function buildAtlas(uniforms: ScreenUniforms) {
   if (disposed.has(uniforms)) return;
   const canvas = document.createElement("canvas");
@@ -104,7 +103,7 @@ export function createScreenUniforms(): ScreenUniforms {
   return uniforms;
 }
 
-const SCREEN_GLSL = /* glsl */ `
+const SCREEN_GLSL = `
 uniform float uPower; uniform float uPayCard; uniform float uPay; uniform float uQr; uniform float uQrCollapse;
 uniform float uMorph; uniform float uMap; uniform float uNotify; uniform float uTime; uniform float uUi;
 uniform sampler2D uAtlas;
@@ -120,7 +119,6 @@ float sdRoundBox(vec2 p, vec2 b, float r) { vec2 q = abs(p) - b + r; return leng
 float hash2(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
 float fillSd(float d) { return smoothstep(0.0025, -0.0025, d); }
 
-// Draws an atlas label centred at c, h tall (screen units); returns coverage.
 float drawLabel(vec2 p, vec2 c, float h, vec4 r) {
   if (r.z <= 0.0) return 0.0;
   float w = h * (r.z / r.w) * ATLAS_ASPECT;
@@ -136,7 +134,6 @@ vec3 screenUI(vec2 uv) {
   vec2 p = (s - 0.5) * vec2(SCREEN_ASPECT, 1.0);
   vec3 green = vec3(0.24, 0.86, 0.52);
 
-  // Welcome: deep emerald with light borrowed from the selected metal finish.
   float r = length(p * vec2(1.0, 0.8));
   vec3 col = mix(vec3(0.025, 0.14, 0.085), vec3(0.003, 0.012, 0.008), smoothstep(0.0, 0.55, r));
   col += uFinishTint * exp(-length((p - vec2(0.20, -0.22)) * vec2(3.0, 1.2)) * 4.0) * 0.14 * uWelcome;
@@ -149,7 +146,6 @@ vec3 screenUI(vec2 uv) {
     col = mix(col, mint, drawLabel(p, vec2(0.0, 0.32), 0.045, uLBrand) * lettering);
     col = mix(col, ivory, drawLabel(p, vec2(0.0, 0.15), 0.108, uLHello) * lettering);
     col = mix(col, ivory, drawLabel(p, vec2(0.0, 0.045), 0.108, uLButwal) * lettering);
-    // A restrained local route folds into the point before the device turns.
     float extent = max(0.001, 1.0 - uWelcomeCollapse);
     vec2 origin = vec2(0.06, -0.20);
     vec2 a = origin + vec2(-0.20, 0.10) * extent;
@@ -164,7 +160,6 @@ vec3 screenUI(vec2 uv) {
     col = mix(col, mint, drawLabel(p, vec2(0.0, -0.31), 0.028, uLAmarpath) * lettering);
   }
 
-  // Payment: CASH / QR rows with a highlight that moves with scroll.
   if (uPayCard > 0.001) {
     float card = sdRoundBox(p - vec2(0.0, -0.18), vec2(0.17, 0.11), 0.03);
     col = mix(col, vec3(0.03, 0.06, 0.05), fillSd(card) * 0.85 * uPayCard);
@@ -174,7 +169,6 @@ vec3 screenUI(vec2 uv) {
     col = mix(col, vec3(1.0), drawLabel(p, vec2(0.0, -0.23), 0.034, uLQr) * uPayCard);
   }
 
-  // Abstract QR (not scannable), collapsing into the green dot.
   vec2 q = p - vec2(0.0, 0.08);
   if (uQr > 0.001 && uQrCollapse < 0.999) {
     float size = 0.17 * (1.0 - uQrCollapse);
@@ -184,7 +178,6 @@ vec3 screenUI(vec2 uv) {
     col = mix(col, vec3(0.92), on * uQr * (1.0 - uQrCollapse));
   }
 
-  // One shape: dot → check → pin (distance fields blended, not swapped).
   float shapeOn = max(smoothstep(0.6, 1.0, uQrCollapse), step(0.001, uMorph));
   if (shapeOn > 0.0) {
     float dDot = length(q) - 0.035;
@@ -200,7 +193,6 @@ vec3 screenUI(vec2 uv) {
     col = mix(col, vec3(1.0), drawLabel(p, vec2(0.0, -0.05), 0.028, uLReady) * ready);
   }
 
-  // Delivery map: streets drawn by light, the pin pulsing at the store.
   if (uMap > 0.001) {
     float lines = 0.0;
     for (int i = 0; i < ${STREETS.length}; i++) {
@@ -211,7 +203,6 @@ vec3 screenUI(vec2 uv) {
       lines = max(lines, smoothstep(0.004, 0.0, sdSegment(p, a, b)));
     }
     col = mix(col, green * 0.9, lines * 0.85);
-    // The pulse spreads from the pin's tip — the store's spot on the map.
     float pulse = fract(uTime * 0.7);
     float ring = abs(length(q - vec2(0.0, -0.07)) - pulse * 0.12) - 0.003;
     col += green * fillSd(ring) * (1.0 - pulse) * smoothstep(0.3, 0.6, uMap);
@@ -222,7 +213,6 @@ vec3 screenUI(vec2 uv) {
     col = mix(col, vec3(0.75), drawLabel(p, vec2(0.0, -0.32), 0.022, uLPickup) * labels);
   }
 
-  // "Order confirmed" — a restrained demonstration notification.
   if (uNotify > 0.001) {
     vec2 c = vec2(0.0, mix(0.58, 0.41, uNotify));
     float banner = sdRoundBox(p - c, vec2(0.2, 0.034), 0.02);
@@ -234,7 +224,6 @@ vec3 screenUI(vec2 uv) {
 }
 `;
 
-/** Replaces the OLED's emissive with the screen UI (keeps its emissive map so the UV varying exists). */
 export function patchScreen(material: MeshStandardMaterial, uniforms: ScreenUniforms) {
   material.onBeforeCompile = (shader) => {
     Object.assign(shader.uniforms, uniforms);

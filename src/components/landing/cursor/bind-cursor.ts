@@ -2,7 +2,6 @@ import { createAnimatable, utils } from "animejs";
 
 const LABELS: Record<string, string> = { view: "View", select: "Select", chat: "Chat ↗", map: "Map ↗" };
 
-/** A 24 px precision ring that trails the (always visible) native pointer. */
 export function bindCursor(ring: HTMLElement): () => void {
   const label = ring.querySelector<HTMLElement>(".cursor-label");
   const follow = createAnimatable(ring, { x: 160, y: 160, ease: "out(3)" });

@@ -52,11 +52,6 @@ function materialsNamed(root: Group, names: string[]): MeshStandardMaterial[] {
   return [...found];
 }
 
-/**
- * Measures the model in its own space (independent of our wrapper groups, so re-running is safe):
- * the rotation that stands it upright with the screen facing +Z, its centre, its height and its
- * width/height ranges in that upright frame.
- */
 function measure(model: Group) {
   model.updateMatrixWorld(true);
   const toModel = new Matrix4().copy(model.matrixWorld).invert();
@@ -68,7 +63,6 @@ function measure(model: Group) {
   const oled = meshes.find((m) => !Array.isArray(m.material) && m.material.name === "OLED");
   if (!oled) throw new Error("Phone model has no OLED mesh");
 
-  // In the mesh's own space the long axis is Z (top at -Z) and the back faces +Y.
   const oledMatrix = relative(oled);
   const up = new Vector3(0, 0, -1).transformDirection(oledMatrix);
   const front = new Vector3(0, -1, 0).transformDirection(oledMatrix);
@@ -102,7 +96,6 @@ function measure(model: Group) {
 
 let wallpaper: CanvasTexture | null = null;
 
-/** Keeps an emissive map on the OLED so its UV varying exists; the screen shader draws the UI. */
 function getWallpaper(): CanvasTexture | null {
   if (wallpaper) return wallpaper;
   const canvas = document.createElement("canvas");
@@ -155,11 +148,6 @@ function buildRig(model: Group, orient: Group, centre: Group): Rig {
   return rig;
 }
 
-/**
- * three.js draws a transparent double-sided material twice per frame (back faces, then front) and
- * flags it needsUpdate before each pass, which re-resolves its shader every frame. The phone's
- * eight glass/lens materials are thin panels, so one pass looks the same and costs far less.
- */
 function drawGlassInOnePass(root: Group) {
   root.traverse((object) => {
     if (!(object instanceof Mesh)) return;
@@ -196,7 +184,6 @@ function frame({ state, delta, place, light, outline, rig, tier, look, capture }
   const pose = filmPose(fp);
   const beats = filmBeats(fp);
 
-  // Placement: the device slot (where the poster still sits), easing into the film frame.
   let x = vw * 0.17;
   let y = 0;
   let h = vh * 0.72;
@@ -209,7 +196,6 @@ function frame({ state, delta, place, light, outline, rig, tier, look, capture }
     y = (0.5 - slot.cy) * vh;
     h = slot.h * vh * STILL_FILL;
   }
-  // Phones keep the device centred; the copy sits below it rather than beside it.
   x = MathUtils.lerp(x, mobile ? 0 : pose.x * vw, k);
   y = MathUtils.lerp(y, mobile ? vh * 0.17 : 0, k);
   h = MathUtils.lerp(h, vh * (mobile ? 0.38 : 0.78), k) * MathUtils.lerp(1, mobile ? Math.min(pose.scale, 1.14) : pose.scale, k);
@@ -223,26 +209,22 @@ function frame({ state, delta, place, light, outline, rig, tier, look, capture }
   place.rotation.y = MathUtils.lerp(BASE_YAW, pose.yaw, k) + Math.sin(t * 0.21) * 0.012 * idle + sm.x * 0.05 * idle;
   place.rotation.x = MathUtils.lerp(BASE_PITCH, pose.pitch, k) + Math.sin(t * 0.17) * 0.006 * idle + sm.y * 0.025 * idle;
 
-  // Moment 05: the phone descends toward the first store tile's column.
   if (beats.land > 0 && film.tile.w > 0) {
     const tileX = ((film.tile.x + film.tile.w / 2) / state.size.width - 0.5) * vw;
     place.position.x = MathUtils.lerp(place.position.x, tileX, beats.land);
     place.position.y = MathUtils.lerp(place.position.y, -vh * 0.42, beats.land);
   }
 
-  // Layers open along the thickness axis; the internals appear once the shell opens or is scanned.
   const gapSize = mobile ? 0.009 : 0.013;
   applyLayers(rig.layers, beats.explode, gapSize);
   rig.layers.internals.visible = beats.explode.some((e) => e > 0.002) || beats.scanFade > 0.01;
 
-  // Fly-through: centre the gap between the logic board and the frame.
   if (pose.gap > 0) {
     place.updateMatrixWorld();
     scratch.set(0, 0, 0.5 * layerOffset(2, beats.explode, gapSize)).applyMatrix4(place.matrixWorld);
     place.position.x -= (scratch.x - place.position.x) * pose.gap;
   }
 
-  // Finish wipe: old finish ahead of the band, new finish behind it.
   const from = capture ? look : (sceneState.wipe.from ?? look);
   rig.aluminium.uFrom.value.set(from.aluminium);
   rig.aluminium.uTo.value.set(look.aluminium);
@@ -262,7 +244,6 @@ function frame({ state, delta, place, light, outline, rig, tier, look, capture }
     m.roughness = MathUtils.lerp(from.roughness, look.roughness, mix);
   }
 
-  // Screen story.
   const sc = rig.screen;
   const welcome = welcomeMotion(k);
   sc.uWelcome.value = capture ? 1 : welcome.opacity;
@@ -279,7 +260,6 @@ function frame({ state, delta, place, light, outline, rig, tier, look, capture }
   sc.uTime.value = t;
   sc.uUi.value = beats.ui;
 
-  // Light: boot reveal, finish-change dip, the dark pass between layers.
   state.gl.toneMappingExposure = (capture ? 1 : sceneState.intro.exposure) * (1 - 0.3 * sceneState.dim) * pose.exposure;
   if (light) light.intensity = capture ? 0 : sceneState.intro.light * 3;
   if (outline) {
@@ -288,8 +268,6 @@ function frame({ state, delta, place, light, outline, rig, tier, look, capture }
     outline.position.set(Math.cos(a) * 0.045, Math.sin(a) * 0.085, -0.012);
   }
 
-  // Leader-line anchors: whichever side edge of each layer is further right on screen, so labels
-  // read outward from the stack instead of across it; staggered vertically.
   for (let i = 0; i < 5; i++) {
     const z = layerOffset(i, beats.explode, gapSize);
     const ay = 0.06 - i * 0.03;
@@ -299,7 +277,6 @@ function frame({ state, delta, place, light, outline, rig, tier, look, capture }
     setFilmLabel(i, ((edge.x + 1) / 2) * state.size.width, ((1 - edge.y) / 2) * state.size.height, edge.z < 1);
   }
 
-  // The screen's projected rectangle: the escaping map lines start exactly on it.
   let left = Infinity;
   let top = Infinity;
   let right = -Infinity;
@@ -369,18 +346,13 @@ export function PhoneModel({
     if (!r.ready) {
       r.ready = true;
       onReady();
-      // The film's hidden internals (battery, logic board, scan) would otherwise compile their
-      // shaders the moment they first appear, freezing the scroll mid-film. Compile everything now,
-      // off the critical path, with the same lights and environment the film will render with.
       state.gl.compileAsync(state.scene, state.camera).catch(() => {});
     }
   });
 
   return (
     <group ref={place}>
-      {/* The green light from the boot dot, at the phone's front-left edge. */}
       <pointLight ref={light} color="#3ddc84" intensity={0} distance={0} decay={2} position={[-0.07, 0.05, 0.1]} />
-      {/* Travels around the outline of the device at the end of act 01. */}
       <pointLight ref={outline} color="#cfffe4" intensity={0} distance={0} decay={2} />
       <group ref={orient}>
         <group ref={centre}>

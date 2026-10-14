@@ -12,7 +12,6 @@ export function formatInvoiceNumber(invoiceNumber: number): string {
   return `INV-${invoiceNumber}`;
 }
 
-/** "black,white , mist blue" → "Black, White, Mist blue" (as typed in the admin, tidied for display). */
 export function formatColors(color: string | null | undefined): string {
   return (color ?? "")
     .split(",")
@@ -22,14 +21,12 @@ export function formatColors(color: string | null | undefined): string {
     .join(", ");
 }
 
-/** "256", "256gb" or "1 TB" → "256 GB" / "1 TB"; anything else is shown as typed. */
 export function formatStorage(storage: string | null | undefined): string {
   const value = (storage ?? "").trim();
   const match = /^(\d+)\s*(gb|tb)?$/i.exec(value);
   return match ? `${match[1]} ${(match[2] ?? "GB").toUpperCase()}` : value;
 }
 
-/** One line for a product card: "Black, White · 256 GB". */
 export function formatVariant(color: string | null | undefined, storage: string | null | undefined): string {
   return [formatColors(color), formatStorage(storage)].filter(Boolean).join(" · ");
 }

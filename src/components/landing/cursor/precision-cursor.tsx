@@ -10,7 +10,6 @@ function subscribe(onChange: () => void) {
   return () => query.removeEventListener("change", onChange);
 }
 
-/** Desktop only; never rendered for touch. */
 export function PrecisionCursor() {
   const fine = useSyncExternalStore(subscribe, () => window.matchMedia(QUERY).matches, () => false);
   const ref = useRef<HTMLDivElement>(null);

@@ -6,12 +6,10 @@ import { judgeFrames, windowFps } from "../motion/frame-budget";
 import { stepDownTier } from "../motion/use-tier";
 import { film } from "../scene-store";
 
-/** A lost WebGL context is a failure like any other: the page falls back to the Low presentation. */
 export function ContextGuard({ onLost }: { onLost: () => void }) {
   const gl = useThree((state) => state.gl);
   useEffect(() => {
     const canvas = gl.domElement;
-    // Removed on unmount, before R3F forces its own context loss while disposing the renderer.
     canvas.addEventListener("webglcontextlost", onLost);
     return () => canvas.removeEventListener("webglcontextlost", onLost);
   }, [gl, onLost]);
@@ -21,11 +19,6 @@ export function ContextGuard({ onLost }: { onLost: () => void }) {
 const WINDOW_S = 1.5;
 const WARMUP_S = 4;
 
-/**
- * Steps the tier down once when frames stay under 50 fps for three windows in a row. It does not
- * sample during warm-up (shader compiles), inside the film (never change quality mid-scene), or
- * while the tab is hidden; any of those clears the history.
- */
 export function FrameBudget({ visible }: { visible: boolean }) {
   const state = useRef({ age: 0, frames: 0, elapsed: 0, windows: [] as number[], done: false });
   useEffect(() => {

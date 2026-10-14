@@ -33,18 +33,15 @@ function setCap(tier: Tier) {
   listeners.forEach((listener) => listener());
 }
 
-/** True when ?tier= pins the tier (testing); runtime step-downs are then off. */
 export function isTierForced(): boolean {
   return readTierOverride(window.location.search) !== null;
 }
 
-/** Slow frames: one step down for the rest of the session (never back up). */
 export function stepDownTier() {
   if (cached === null || cached === "low" || isTierForced()) return;
   setCap(lowerTier(cached));
 }
 
-/** The 3D failed (load error, render error, lost context): the Low presentation, in place. */
 export function dropToLowTier() {
   if (cached === "low" || isTierForced()) return;
   setCap("low");
@@ -73,7 +70,6 @@ function getServerSnapshot(): Tier | null {
   return null;
 }
 
-/** The device's quality tier; null during server rendering and hydration. */
 export function useTier(): Tier | null {
   return useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
 }

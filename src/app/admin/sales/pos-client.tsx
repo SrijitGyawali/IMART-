@@ -177,7 +177,6 @@ export function PosClient({
 
   return (
     <div className="grid gap-6 lg:grid-cols-[1fr_380px]">
-      {/* Left: product search + cart */}
       <div>
         <div className="relative">
           <input
@@ -293,7 +292,6 @@ export function PosClient({
         </div>
       </div>
 
-      {/* Right: customer + payment + totals */}
       <div className="space-y-5">
         <div className="rounded-2xl border border-border p-4">
           <p className="mb-2 text-sm font-semibold">Customer</p>

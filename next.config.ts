@@ -15,7 +15,6 @@ const nextConfig: NextConfig = {
       },
     ],
   },
-  // Model and stills use versioned file names, so they can be cached forever.
   async headers() {
     return [
       { source: "/models/:path*", headers: immutable },

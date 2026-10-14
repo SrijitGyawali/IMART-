@@ -19,7 +19,6 @@ export async function subscribeNewsletter(
     .insert({ email: parsed.data });
 
   if (error) {
-    // Already subscribed — treat as success
     if (error.code === "23505") return { ok: true };
     return { ok: false, error: "Could not subscribe right now. Try again." };
   }

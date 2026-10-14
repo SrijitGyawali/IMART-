@@ -1,29 +1,18 @@
 import type { Finish } from "./data";
 
 export interface SceneState {
-  /** Pointer position, -1..1 on both axes (desktop only). */
   pointer: { x: number; y: number };
-  /** Whether the 3D layer should be rendering. */
   visible: boolean;
-  /** The finish on the device (the target of any running wipe). */
   finish: Finish | null;
-  /** Finish wipe across the device: progress -0.05..1.05, glowing band 0..1. */
   wipe: { from: Finish | null; progress: number; band: number };
-  /** Lighting dip while a finish changes, 0..1. */
   dim: number;
-  /** Studio strip light travelling across the environment, 0..1; -1 when idle. */
   sweep: number;
-  /** Boot reveal: scene exposure 0..1 and the green reveal light 0..1. */
   intro: { exposure: number; light: number };
-  /** Hero → film hand-off, 0..1 (scrubbed by scroll). */
   handoff: number;
-  /** Hero device slot in viewport fractions at scroll 0. */
   slot: { cx: number; cy: number; h: number } | null;
-  /** Phone centre projected to the viewport, 0..1 with y down. */
   phoneUv: { x: number; y: number };
 }
 
-// GSAP/Anime/DOM code writes these fields; the 3D scene reads them every frame.
 export const scene: SceneState = {
   pointer: { x: 0, y: 0 },
   visible: true,
@@ -87,7 +76,6 @@ export function setPhoneUv(x: number, y: number) {
 }
 
 let environmentHolds = 0;
-/** Keeps the studio environment re-rendering (for moving lights) until released. */
 export function holdEnvironment(): () => void {
   environmentHolds += 1;
   if (environmentHolds === 1) environment.emit();
@@ -121,13 +109,10 @@ export interface FilmLabel {
   visible: boolean;
 }
 
-/** Film progress 0..1 and the projected anchors of the five layer labels (CSS px). */
 export const film = {
   progress: 0,
   labels: Array.from({ length: 5 }, (): FilmLabel => ({ x: 0, y: 0, visible: false })),
-  /** The phone screen's projected rectangle in CSS px: left, top, right, bottom. */
   screen: { l: 0, t: 0, r: 0, b: 0 },
-  /** The first store tile's horizontal position in viewport px (scroll-independent). */
   tile: { x: 0, w: 0 },
 };
 

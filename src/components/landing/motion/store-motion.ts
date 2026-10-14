@@ -3,10 +3,8 @@ import { bindVisit } from "./visit-motion";
 
 const reduced = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-/** Drops the inline transform anime leaves behind, so CSS transforms (tilt, hover) apply again. */
 const clearTransform = (els: Element[]) => els.forEach((el) => (el as HTMLElement).style.removeProperty("transform"));
 
-/** Hides `targets` now (JS only, so no-JS and reduced motion keep everything visible) and plays `play` once on entry. */
 function onEnter(trigger: Element | null, targets: Element[], play: () => void): () => void {
   if (!trigger || targets.length === 0) return () => {};
   utils.set(targets, { opacity: 0 });
@@ -26,7 +24,6 @@ function onEnter(trigger: Element | null, targets: Element[], play: () => void):
   };
 }
 
-/** Product cards: the image first, then name, then price. */
 function revealCards(cards: Element[]) {
   cards.forEach((card, i) => {
     const parts = [
@@ -47,7 +44,6 @@ function revealCards(cards: Element[]) {
   });
 }
 
-/** Tab switch: the current shelf steps back and blurs out… */
 export function shelfOut(cards: Element[]): Promise<void> {
   if (reduced() || cards.length === 0) return Promise.resolve();
   return new Promise((resolve) => {
@@ -63,7 +59,6 @@ export function shelfOut(cards: Element[]): Promise<void> {
   });
 }
 
-/** …and the next one comes forward and resolves. */
 export function shelfIn(cards: Element[]) {
   if (cards.length === 0) return;
   if (reduced()) {
@@ -85,7 +80,6 @@ export function shelfIn(cards: Element[]) {
   });
 }
 
-/** Rail tiles lean toward the cursor; a soft green light follows it (CSS reads --mx/--my/--rx/--ry). */
 function tilt(track: HTMLElement): () => void {
   const move = (e: PointerEvent) => {
     const tile = (e.target as Element).closest<HTMLElement>(".rail-tile");
@@ -112,7 +106,6 @@ function tilt(track: HTMLElement): () => void {
   };
 }
 
-/** FAQ answers open and close by height instead of snapping. */
 function smoothFaq(list: HTMLElement): () => void {
   const click = (e: MouseEvent) => {
     const summary = (e.target as Element).closest("summary");
@@ -129,7 +122,6 @@ function smoothFaq(list: HTMLElement): () => void {
         duration: 320,
         ease: "inOutQuad",
         onComplete: () => {
-          // A click while closing re-opens instead; only finish if we are still closing.
           if (details.dataset.faq !== "closing") return;
           delete details.dataset.faq;
           details.open = false;
@@ -156,7 +148,6 @@ function smoothFaq(list: HTMLElement): () => void {
   return () => list.removeEventListener("click", click);
 }
 
-/** Service numbers roll through the digits like a counter and settle on their own value. */
 function rollNumbers(numbers: HTMLElement[]) {
   numbers.forEach((el, i) => {
     const target = Number(el.dataset.n ?? el.textContent) || i + 1;
@@ -178,7 +169,6 @@ function rollNumbers(numbers: HTMLElement[]) {
   });
 }
 
-/** Entrances (once), rail tilt + cursor light, smooth FAQ, rolling service numbers, drawn icons and pin. */
 export function bindStoreMotion(root: HTMLElement): () => void {
   if (reduced()) return () => {};
   const cleanups: Array<() => void> = [bindVisit(root)];
@@ -206,7 +196,6 @@ export function bindStoreMotion(root: HTMLElement): () => void {
   const benefits = q<HTMLElement>(".benefit");
   cleanups.push(
     onEnter(root.querySelector(".benefits"), benefits, () => {
-      // Start values first: a delayed tween does not apply its "from" until it begins.
       const plans = benefits.map((benefit) => {
         const lines = svg.createDrawable(benefit.querySelectorAll("svg path, svg circle, svg rect"));
         const text = benefit.querySelector("span");
@@ -242,7 +231,6 @@ export function bindStoreMotion(root: HTMLElement): () => void {
   const faq = root.querySelector<HTMLElement>(".faq-list");
   if (faq) cleanups.push(smoothFaq(faq));
 
-  // The visit pin: the start dot lands, the dashed route marches in, the pin outline draws, the dot pops.
   const pin = root.querySelector<SVGSVGElement>(".visit-pin");
   if (pin) {
     const [start, route, outline, dot] = [

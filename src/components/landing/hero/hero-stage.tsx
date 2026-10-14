@@ -13,7 +13,6 @@ export function HeroStage({ hero, whatsapp }: { hero: HeroData | null; whatsapp:
 
   return (
     <>
-      {/* Mid-back plane: lives outside the hero so the 3D phone renders in front of it. */}
       <p className="hero-word" aria-hidden="true"><span className="hero-word-inner">{hero?.word ?? "iPhone"}</span></p>
       <section className="landing-hero" data-stage-section="hero" aria-labelledby="hero-title">
         <div className="landing-container hero-grid">

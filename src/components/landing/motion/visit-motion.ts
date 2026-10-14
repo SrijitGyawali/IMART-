@@ -1,14 +1,9 @@
 import { getGsap } from "./gsap";
 
-/** Base drift: half the track (one copy of the text) every 36 s. */
 const BASE = 50 / 36;
 const MAX_BOOST = 7;
 const MAX_SKEW = 4;
 
-/**
- * Moment 06: the Amarpath marquee follows scroll velocity. It cruises in the last scroll
- * direction, surges with a fast scroll, then eases back down, leaning slightly while it surges.
- */
 function bindMarquee(root: HTMLElement): () => void {
   const { gsap, ScrollTrigger } = getGsap();
   const section = root.querySelector<HTMLElement>(".visit");
@@ -65,7 +60,6 @@ function bindMarquee(root: HTMLElement): () => void {
   };
 }
 
-/** On desktop the dashed route to the pin leans a few units toward the pointer, then settles. */
 function bindRoutePointer(root: HTMLElement): () => void {
   const section = root.querySelector<HTMLElement>(".visit");
   const route = root.querySelector<SVGPathElement>(".visit-pin path:first-of-type");
@@ -96,7 +90,6 @@ function bindRoutePointer(root: HTMLElement): () => void {
     if (e.pointerType !== "mouse") return;
     const r = route.ownerSVGElement?.getBoundingClientRect();
     if (!r) return;
-    // Direction from the route's midpoint to the pointer, capped at 6 units.
     const dx = e.clientX - (r.left + r.width / 2);
     const dy = e.clientY - (r.top + r.height / 2);
     const len = Math.hypot(dx, dy) || 1;

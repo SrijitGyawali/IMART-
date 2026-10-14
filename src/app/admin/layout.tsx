@@ -17,7 +17,6 @@ export default async function AdminLayout({
     data: { user },
   } = await supabase.auth.getUser();
 
-  // Login page — no chrome
   if (!user) {
     return <>{children}</>;
   }

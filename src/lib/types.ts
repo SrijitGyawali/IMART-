@@ -16,7 +16,6 @@ export interface Product {
   featured: boolean;
   active: boolean;
   created_at: string;
-  // Inventory extension (Phase A/B)
   brand_id?: string | null;
   model?: string;
   color?: string;

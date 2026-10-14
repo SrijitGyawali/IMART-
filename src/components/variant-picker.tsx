@@ -43,8 +43,6 @@ export function VariantPicker({
   const colors = Array.from(new Set(options.map((o) => o.color).filter(Boolean)));
   const storages = Array.from(new Set(options.map((o) => o.storage).filter(Boolean)));
 
-  // Prefer an exact colour+storage match; fall back to whichever variant
-  // has that colour (or that storage) at all.
   function findSlug(color: string, storage: string): string | undefined {
     return (
       options.find((o) => o.color === color && o.storage === storage)?.slug ??

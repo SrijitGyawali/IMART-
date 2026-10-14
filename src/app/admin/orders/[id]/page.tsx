@@ -53,7 +53,6 @@ export default async function AdminOrderDetailPage({
         })}
       </p>
 
-      {/* Customer */}
       <div className="mt-6 rounded-2xl bg-surface p-5">
         <p className="text-sm font-semibold">{order.customer_name}</p>
         <p className="mt-1 text-sm text-muted">
@@ -82,7 +81,6 @@ export default async function AdminOrderDetailPage({
         </div>
       </div>
 
-      {/* Items */}
       <div className="mt-4 rounded-2xl bg-surface p-5">
         <ul className="divide-y divide-border">
           {(items ?? []).map((item) => (

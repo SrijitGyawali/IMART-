@@ -23,7 +23,6 @@ export function FinishPicker({ finishes }: { finishes: Finish[] }) {
     e.currentTarget.querySelectorAll<HTMLButtonElement>("[role=radio]")[next]?.focus();
   }
 
-  // Phones: swiping horizontally across the device also moves through the finishes.
   useEffect(() => {
     const slot = document.querySelector<HTMLElement>(".hero-device-slot");
     if (!slot || finishes.length < 2) return;

@@ -1,4 +1,3 @@
-/** Runs during HTML parsing on hard loads; ignored (text/plain) on client renders. */
 export function InlineScript({ html }: { html: string }) {
   return (
     <script

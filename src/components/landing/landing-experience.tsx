@@ -26,9 +26,6 @@ const subscribeReducedMotion = (notify: () => void) => {
 };
 
 function trackPointer(root: HTMLElement): () => void {
-  // Depth planes drift against the pointer, each by its own amplitude (px at the screen edge).
-  // Writing `translate` straight onto the planes restyles just those elements; a custom property on
-  // a shared ancestor would restyle everything beneath it (every split-text glyph) on each move.
   const planes = [
     ...Array.from(root.querySelectorAll<HTMLElement>(".hero-word-inner"), (el) => ({ el, ax: -6, ay: -4 })),
     ...Array.from(root.querySelectorAll<HTMLElement>(".hero-copy > *"), (el) => ({ el, ax: 2, ay: 2 })),
@@ -41,7 +38,6 @@ function trackPointer(root: HTMLElement): () => void {
     for (const { el, ax, ay } of planes) {
       el.style.translate = `${(smooth.x * ax).toFixed(2)}px ${(smooth.y * ay).toFixed(2)}px`;
     }
-    // Sleep once the planes have caught up with the pointer; the next move wakes the loop.
     const settled = Math.abs(scene.pointer.x - smooth.x) < 0.001 && Math.abs(scene.pointer.y - smooth.y) < 0.001;
     frame = settled ? 0 : requestAnimationFrame(tick);
   };
@@ -90,17 +86,14 @@ export function LandingExperience({
   const entrancePlayed = useRef(false);
   const captureId = useSyncExternalStore(noopSubscribe, () => readCapture(window.location.search), () => null);
   const captureFinish = captureId ? (parseFinishes(captureId.replace(/-/g, " "))[0] ?? null) : null;
-  // Effects key off what they use, so a runtime step-down (high → mid → low) never replays anything.
   const ready = tier !== null;
   const live3d = tier !== null && tier !== "low";
   const depth = tier === "high";
 
-  // The device starts in the hero product's first finish.
   useEffect(() => {
     if (initialFinish && !getSceneFinish()) setSceneFinish(initialFinish);
   }, [initialFinish]);
 
-  // Stage = the section under the viewport's centre line.
   useEffect(() => {
     const root = rootRef.current;
     if (!root) return;
@@ -122,7 +115,6 @@ export function LandingExperience({
     };
   }, []);
 
-  // The live phone sits exactly where the poster still sits.
   useEffect(() => {
     const slot = rootRef.current?.querySelector<HTMLElement>(".hero-device-slot");
     if (!slot) return;
@@ -151,20 +143,17 @@ export function LandingExperience({
     };
   }, []);
 
-  // Magnetic buttons and parallax (StringTune); scrolling itself stays native everywhere.
   useEffect(() => {
     if (!ready || captureId) return;
     startStringTune();
   }, [ready, captureId]);
 
-  // Pointer: phone reaction + depth planes (desktop, high tier).
   useEffect(() => {
     const root = rootRef.current;
     if (!depth || !root || captureId) return;
     return trackPointer(root);
   }, [depth, captureId]);
 
-  // Hero motion: entrance after the boot, first studio sweep once the phone is live, scroll hand-off.
   useEffect(() => {
     const root = rootRef.current;
     if (!ready || !root || captureId) return;
@@ -181,13 +170,11 @@ export function LandingExperience({
         entrancePlayed.current = true;
         cleanups.push(playHeroEntrance(root));
       }
-      // Low tier never becomes ready, so this simply never fires there.
       cleanups.push(whenPhoneReady(root, () => playStudioSweep()));
     };
     const unsubscribe = subscribeBoot(start);
     if (isBootDone()) start();
     cleanups.push(bindHeroHandoff(root));
-    // The light store comes alive on every tier; it is DOM-only and cheap.
     cleanups.push(bindStoreMotion(root));
     return () => {
       unsubscribe();
@@ -195,7 +182,6 @@ export function LandingExperience({
     };
   }, [ready, captureId, reducedMotion]);
 
-  // The pinned film needs the live phone; Low tier (or a failed 3D) keeps the stacked, server-rendered acts.
   useEffect(() => {
     const root = rootRef.current;
     if (!live3d || !root || captureId || reducedMotion) return;
@@ -212,7 +198,6 @@ export function LandingExperience({
       data-capture={captureId ? "" : undefined}
     >
       {children}
-      {/* White light for the big transition: under the canvas, so the phone stays on top of it. */}
       <div className="landing-flood" aria-hidden="true" />
       {tier !== null && (tier !== "low" || captureId) && (
         <PhoneLayer

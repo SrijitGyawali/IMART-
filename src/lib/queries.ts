@@ -36,10 +36,6 @@ export async function getProducts(
       ? { categorySlug: filtersOrCategorySlug }
       : (filtersOrCategorySlug ?? {});
 
-  // !inner is required for the dot-notation filter below to actually
-  // constrain rows — but only request it for a relation we're filtering
-  // on, otherwise products with no brand/category would be excluded
-  // from every unfiltered listing.
   const categoryJoin = filters.categorySlug ? "categories!inner(slug)" : "";
   const brandJoin = filters.brandSlug ? "brands!inner(slug)" : "";
   const select = ["*", categoryJoin, brandJoin].filter(Boolean).join(", ");
@@ -64,8 +60,6 @@ export async function getProducts(
   if (filters.search) {
     const term = filters.search.trim().slice(0, 80);
     if (term) {
-      // Quote the entire filter value so punctuation stays literal rather
-      // than becoming PostgREST syntax. Escape ILIKE wildcard characters.
       const pattern = JSON.stringify(`%${term.replace(/[%_\\]/g, "\\$&")}%`);
       query = query.or(
         `name.ilike.${pattern},model.ilike.${pattern},description.ilike.${pattern}`
@@ -77,7 +71,6 @@ export async function getProducts(
   return (data ?? []) as unknown as Product[];
 }
 
-/** Sibling products sharing the same colour/storage variant group. */
 export async function getProductGroupSiblings(
   groupId: string,
   excludeId?: string
@@ -96,7 +89,6 @@ export async function getProductGroupSiblings(
   return data ?? [];
 }
 
-/** Lightweight product list for the admin "link as variant" picker. */
 export async function getAdminProductOptions(): Promise<
   Pick<Product, "id" | "name" | "color" | "storage">[]
 > {
@@ -130,8 +122,6 @@ export async function getProductBySlug(slug: string): Promise<Product | null> {
   return data;
 }
 
-// ---------- Admin: POS / Sales ----------
-
 export async function getPosProducts(): Promise<Product[]> {
   const supabase = await createClient();
   const { data } = await supabase
@@ -155,8 +145,8 @@ export async function getCustomerList(): Promise<Customer[]> {
 export interface SaleFilters {
   status?: string;
   paymentMethod?: string;
-  from?: string; // ISO date
-  to?: string; // ISO date
+  from?: string;
+  to?: string;
 }
 
 export async function getSales(filters: SaleFilters = {}): Promise<Sale[]> {

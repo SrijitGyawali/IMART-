@@ -1,4 +1,3 @@
-/* The welcome is a complete first screen, then becomes the product film. */
 .hero-grid {
   grid-template-areas: "headline device" "purchase device" "finishes device";
   column-gap: 48px;

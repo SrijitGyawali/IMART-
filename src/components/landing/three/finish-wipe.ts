@@ -1,6 +1,5 @@
 import { Color, Matrix4, Vector2, type MeshStandardMaterial } from "three";
 
-/** Uniforms shared by every shell material: the wipe, the scan, and the phone's own frame. */
 export interface SharedWipe {
   uWipe: { value: number };
   uBand: { value: number };
@@ -11,7 +10,6 @@ export interface SharedWipe {
   uScanFade: { value: number };
 }
 
-/** Per material group: the finish being replaced and the one being revealed. */
 export interface WipeColors {
   uFrom: { value: Color };
   uTo: { value: Color };
@@ -33,11 +31,6 @@ export function createWipeColors(): WipeColors {
   return { uFrom: { value: new Color() }, uTo: { value: new Color() } };
 }
 
-/**
- * Finish change: the new finish is revealed behind a thin vertical light crossing the device.
- * Film scan: a green line travels down the shell; where it has passed, the shell turns
- * temporarily see-through (screen-door dither, so no transparent-sort artefacts).
- */
 export function patchWipe(material: MeshStandardMaterial, shared: SharedWipe, colors: WipeColors) {
   material.color.set("#ffffff");
   material.onBeforeCompile = (shader) => {

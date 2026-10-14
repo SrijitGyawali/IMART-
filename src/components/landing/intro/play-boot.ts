@@ -4,7 +4,6 @@ import { markBootDone, scene } from "../scene-store";
 
 const SKIP_EVENTS = ["pointerdown", "keydown", "wheel", "touchstart"] as const;
 
-/** Moment 01: dot → signal → "iMart." → the dot's green light reveals the phone. */
 export function playBoot(root: HTMLElement): () => void {
   const html = document.documentElement;
   const curtain = root.querySelector<HTMLElement>(".boot-curtain");
@@ -38,7 +37,6 @@ export function playBoot(root: HTMLElement): () => void {
     markBootDone();
   };
 
-  // The light opens from wherever the logo's dot actually is.
   const reveal = () => {
     const r = dot.getBoundingClientRect();
     const x = r.left + r.width / 2;
@@ -60,12 +58,9 @@ export function playBoot(root: HTMLElement): () => void {
     .add(glow, { opacity: [0, 0.9], scale: [0.2, 1], duration: 220, ease: "outQuad" }, 700)
     .add(glow, { opacity: [0.9, 0], scale: [1, 1.8], duration: 300, ease: "inQuad" }, 920)
     .add(logo, { scale: [1, 1.18], duration: 500, ease: "inQuad" }, 700)
-    // Letters part from the centre: -0.44w … +0.44w across the five of them.
     .add(letters, { x: stagger(window.innerWidth * 0.22, { start: -window.innerWidth * 0.44 }), opacity: 0, filter: "blur(8px)", duration: 480, ease: "inQuad" }, 720)
     .add(dot, { scale: [1, 5], opacity: [1, 0], duration: 400, ease: "inQuad" }, 720)
     .add(curtain, { "--r": [0, radius], duration: 500, ease: "inQuad" }, 700)
-    // 3D side, always scheduled: if the phone isn't live yet its canvas is still hidden, and it
-    // simply appears fully lit later (the reveal then shows the still underneath).
     .add(scene.intro, { light: [0, 1], duration: 220, ease: "outQuad" }, 700)
     .add(scene.intro, { exposure: [0.04, 1], duration: 480, ease: "inQuad" }, 720)
     .add(scene.intro, { light: [1, 0], duration: 320, ease: "inQuad" }, 920);

@@ -380,7 +380,6 @@ export function ProductForm({
         />
       </div>
 
-      {/* Existing images */}
       {keptImages.length > 0 && (
         <div>
           <p className="mb-1.5 text-sm">Current images</p>

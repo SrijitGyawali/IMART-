@@ -27,7 +27,6 @@ export async function placeOrder(
 
   const supabase = await createClient();
 
-  // Re-price items server-side — never trust client prices
   const ids = items.map((i) => i.productId);
   const { data: products, error: productsError } = await supabase
     .from("products")

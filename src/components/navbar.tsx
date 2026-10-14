@@ -12,7 +12,6 @@ export function Navbar({ categories }: { categories: Category[] }) {
   const { count, hydrated } = useCart();
   const [menuOpen, setMenuOpen] = useState(false);
   const whatsapp = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER ?? "";
-  // On the landing page the header starts dark over the stage — decided during SSR, so no flash.
   const onLanding = usePathname() === "/";
 
   return (

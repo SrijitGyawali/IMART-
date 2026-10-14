@@ -79,8 +79,6 @@ export async function saveProduct(
     };
   }
 
-  // Linking to another product as a colour/storage variant: reuse its
-  // group id (creating one on it first if it doesn't have one yet).
   let productGroupId: string | null = null;
   if (parsed.data.variant_of) {
     const { data: target } = await service
@@ -100,7 +98,6 @@ export async function saveProduct(
     }
   }
 
-  // Images kept from before (edit mode) + newly uploaded files
   let images: string[] = [];
   try {
     images = JSON.parse((formData.get("kept_images") as string) || "[]");
@@ -155,8 +152,6 @@ export async function saveProduct(
     supplier_id: parsed.data.supplier_id || null,
     warranty_months: parsed.data.warranty_months,
     imei_tracked: parsed.data.imei_tracked,
-    // Only touched when linking to another product — omitted otherwise so
-    // editing an already-grouped product doesn't wipe its group membership.
     ...(productGroupId ? { product_group_id: productGroupId } : {}),
   };
 

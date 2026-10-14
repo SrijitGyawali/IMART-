@@ -2,11 +2,9 @@ import { animate, createTimeline, splitText, stagger, utils } from "animejs";
 import { holdEnvironment, scene } from "../scene-store";
 import { getGsap } from "./gsap";
 
-/** Characters rise from just below the baseline while tracking tightens; then the rest. */
 export function playHeroEntrance(root: HTMLElement): () => void {
   const html = document.documentElement;
   if (window.matchMedia("(max-width: 760px)").matches) {
-    // The mobile purchase path is visible immediately; only the heading settles.
     html.dataset.entrance = "done";
     const animation = animate(root.querySelectorAll(".hero-title"), {
       y: [6, 0], opacity: [0.85, 1], duration: 520, ease: "outQuart",
@@ -37,15 +35,12 @@ export function playHeroEntrance(root: HTMLElement): () => void {
 
   return () => {
     tl.revert();
-    // The timeline starts after this setup; revert it too so a preference change
-    // cannot leave the purchase controls at the entrance's hidden starting value.
     initialRest.revert();
     splits.forEach((s) => s.revert());
     html.dataset.entrance = "done";
   };
 }
 
-/** The first "wow": a narrow studio light travels along the frame, then disappears. */
 export function playStudioSweep(duration = 1600): () => void {
   const release = holdEnvironment();
   scene.sweep = 0;
@@ -65,7 +60,6 @@ export function playStudioSweep(duration = 1600): () => void {
   };
 }
 
-/** Scroll start: headline recedes, PRO grows, the phone moves to centre, the stage darkens. */
 export function bindHeroHandoff(root: HTMLElement): () => void {
   const { gsap } = getGsap();
   const hero = root.querySelector(".landing-hero");
@@ -74,8 +68,6 @@ export function bindHeroHandoff(root: HTMLElement): () => void {
     gsap
       .timeline({ scrollTrigger: {
         trigger: hero,
-        // On short/landscape screens let visitors reach below-fold buying controls
-        // before handing the fixed device into the film.
         start: () => hero.getBoundingClientRect().height > window.innerHeight + 1 ? "bottom bottom" : "top top",
         end: "bottom top", scrub: 0.6, invalidateOnRefresh: true,
       } })
@@ -87,7 +79,6 @@ export function bindHeroHandoff(root: HTMLElement): () => void {
   return () => ctx.revert();
 }
 
-/** Runs `fn` once the 3D phone is ready (data-phone="ready" on the landing root). */
 export function whenPhoneReady(root: HTMLElement, fn: () => () => void): () => void {
   let cleanup: (() => void) | null = null;
   const run = () => {

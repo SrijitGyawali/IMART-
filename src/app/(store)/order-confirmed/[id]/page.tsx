@@ -68,7 +68,6 @@ export default async function OrderConfirmedPage({
         {order.phone} to confirm.
       </p>
 
-      {/* Summary */}
       <div className="mt-8 w-full rounded-2xl bg-surface p-4 text-left">
         <ul className="divide-y divide-border">
           {(items ?? []).map((item) => (
@@ -99,7 +98,6 @@ export default async function OrderConfirmedPage({
         </div>
       </div>
 
-      {/* QR payment */}
       {order.payment_method === "qr" && (
         <div className="mt-6 w-full rounded-2xl bg-surface p-6">
           <p className="text-sm font-semibold">Scan to pay</p>

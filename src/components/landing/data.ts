@@ -1,6 +1,5 @@
 import type { Category, Product } from "@/lib/types";
 
-/** Product slugs the hero features, in order of preference. */
 export const HERO_SLUGS = ["apple-iphone-17-pro", "apple-iphone-17-pro-max"];
 
 export interface Finish {
@@ -30,7 +29,6 @@ export interface HeroData {
   image: string | null;
   finishes: Finish[];
   isPro: boolean;
-  /** The huge, barely visible background word behind the phone. */
   word: string;
 }
 
@@ -159,7 +157,6 @@ export function buildPromos(products: Product[]): Promo[] {
   return promos;
 }
 
-/** Only public catalogue fields may cross into client components. */
 export function toPublicProduct(p: Product): Product {
   return {
     id: p.id, name: p.name, slug: p.slug, price: p.price, description: p.description,

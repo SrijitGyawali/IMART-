@@ -11,11 +11,9 @@ import { shelfIn, shelfOut } from "../motion/store-motion";
 export function ProductShowcase({ shelves, products }: { shelves: Shelf[]; products: Product[] }) {
   const [active, setActive] = useState(shelves[0]?.key ?? "");
   const gridRef = useRef<HTMLDivElement>(null);
-  // The first render is left to the section entrance; only tab swaps animate here.
   const swapped = useRef(false);
   const shelfKey = (shelves.find((s) => s.key === active) ?? shelves[0])?.key;
 
-  // Layout effect: the incoming cards are hidden before the browser paints them.
   useLayoutEffect(() => {
     const grid = gridRef.current;
     if (grid && swapped.current) shelfIn(Array.from(grid.children));

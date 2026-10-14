@@ -4,7 +4,6 @@ import { holdEnvironment, scene, setSceneFinish } from "../scene-store";
 
 let running: Timeline | null = null;
 
-/** Moment 02: lighting dims, a thin light crosses the device revealing the new finish, it settles. */
 export function playFinishChange(next: Finish) {
   const current = scene.finish;
   if (current?.id === next.id) return;

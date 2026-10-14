@@ -1,7 +1,3 @@
-/**
- * Runs `tick` on every animation frame, but only while `target` is on screen. When it leaves,
- * the loop stops after one last tick, so whatever it draws is left in its final state.
- */
 export function loopWhileInView(target: Element, tick: () => void): () => void {
   let frame = 0;
   const loop = () => {

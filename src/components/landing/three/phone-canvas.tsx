@@ -30,7 +30,6 @@ export default function PhoneCanvas({
   const visible = useSyncExternalStore(subscribeScene, getSceneVisible, () => true);
   const live = useSyncExternalStore(subscribeEnvironment, getEnvironmentLive, () => false);
   const capture = captureFinish !== null;
-  // ?tier= pins the tier for testing, and capture renders stills: neither should change quality mid-run.
   const monitor = !capture && !isTierForced();
   return (
     <Canvas

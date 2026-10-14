@@ -69,7 +69,6 @@ export default function CheckoutPage() {
     <main className="mx-auto w-full max-w-3xl flex-1 px-4 pt-10">
       <h1 className="text-3xl font-semibold tracking-tight">Checkout</h1>
 
-      {/* Order summary */}
       <div className="mt-8 rounded-2xl bg-surface p-4">
         <ul className="divide-y divide-border">
           {items.map((item) => (
@@ -105,7 +104,6 @@ export default function CheckoutPage() {
         </div>
       </div>
 
-      {/* Form */}
       <form onSubmit={handleSubmit} className="mt-8 space-y-5 pb-16">
         <div>
           <label htmlFor="customer_name" className="mb-1.5 block text-sm">
@@ -137,7 +135,6 @@ export default function CheckoutPage() {
           />
         </div>
 
-        {/* Delivery method */}
         <div>
           <p className="mb-1.5 text-sm">Delivery</p>
           <div className="grid grid-cols-2 gap-3">
@@ -185,7 +182,6 @@ export default function CheckoutPage() {
           </div>
         )}
 
-        {/* Payment method */}
         <div>
           <p className="mb-1.5 text-sm">Payment</p>
           <div className="grid grid-cols-2 gap-3">

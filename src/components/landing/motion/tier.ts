@@ -4,7 +4,6 @@ export interface TierInput {
   webgl2: boolean;
   reducedMotion: boolean;
   saveData: boolean;
-  /** navigator.deviceMemory (GB, Chromium only); null when unknown. */
   deviceMemory: number | null;
   cores: number | null;
   coarsePointer: boolean;
@@ -29,12 +28,10 @@ export function readTierOverride(search: string): Tier | null {
 
 const RANK: Record<Tier, number> = { low: 0, mid: 1, high: 2 };
 
-/** One step down: high → mid → low. */
 export function lowerTier(tier: Tier): Tier {
   return tier === "high" ? "mid" : "low";
 }
 
-/** The lower of the decided tier and the session's cap (set by runtime step-downs). */
 export function capTier(tier: Tier, cap: Tier | null): Tier {
   return cap !== null && RANK[cap] < RANK[tier] ? cap : tier;
 }

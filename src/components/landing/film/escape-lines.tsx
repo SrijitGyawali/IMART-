@@ -10,7 +10,6 @@ type Segment = [number, number, number, number];
 
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
 
-/** Guide targets: the rail tiles' left/right edges as vertical lines, plus one horizontal rule. */
 function measureGuides(): Segment[] {
   const w = window.innerWidth;
   const h = window.innerHeight;
@@ -40,7 +39,6 @@ function draw(svg: SVGSVGElement, lines: SVGLineElement[], guides: Segment[]) {
   const sw = s.r - s.l;
   const sh = s.b - s.t;
   const spread = 1 + beats.escape * 5;
-  // Screen space → px on the phone, pushed outward from the screen centre as the lines escape.
   const toPx = (x: number, y: number): [number, number] => [cx + (x / SCREEN_ASPECT) * sw * spread, cy - y * sh * spread];
   lines.forEach((line, i) => {
     const [ax, ay, bx, by] = STREETS[i];
@@ -52,11 +50,9 @@ function draw(svg: SVGSVGElement, lines: SVGLineElement[], guides: Segment[]) {
     line.setAttribute("x2", lerp(x2, g[2], beats.guides).toFixed(1));
     line.setAttribute("y2", lerp(y2, g[3], beats.guides).toFixed(1));
   });
-  // Signal green while escaping, store-line grey once they have become guides.
   svg.style.setProperty("--guide", beats.guides.toFixed(3));
 }
 
-/** Moment 05: the map's lines escape the phone and straighten into the store's guides. */
 export function EscapeLines() {
   const ref = useRef<SVGSVGElement>(null);
   useEffect(() => {
@@ -68,7 +64,6 @@ export function EscapeLines() {
       guides = measureGuides();
     };
     window.addEventListener("resize", onResize);
-    // Only while the film is on screen: the lines exist for the end of the film alone.
     const stop = loopWhileInView(svg.closest(".landing-film") ?? svg, () => draw(svg, lines, guides));
     return () => {
       window.removeEventListener("resize", onResize);

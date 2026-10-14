@@ -19,11 +19,9 @@ function track(root: HTMLElement): () => void {
       if (a.visible) el.style.transform = next;
     });
   };
-  // Only while the film is on screen; elsewhere the labels are not shown at all.
   return loopWhileInView(root.closest(".landing-film") ?? root, tick);
 }
 
-/** Editorial labels with leader lines, following each layer's projected edge. */
 export function FilmLabels() {
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {

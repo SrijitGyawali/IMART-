@@ -7,15 +7,14 @@ import type { Finish } from "../data";
 import { film, scene as sceneState } from "../scene-store";
 import { filmBeats } from "../film/film-timeline";
 
-const vertexShader = /* glsl */ `
+const vertexShader = `
 varying vec2 vUv;
 void main() {
   vUv = uv;
   gl_Position = vec4(position.xy, 0.9999, 1.0);
 }`;
 
-// Emerald aurora, a light pool behind the device and fine grain — almost invisible until you look.
-const fragmentShader = /* glsl */ `
+const fragmentShader = `
 uniform float uTime;
 uniform vec2 uRes;
 uniform vec3 uTint;
@@ -65,7 +64,6 @@ void main() {
   float grain = (hash(vUv * uRes) - 0.5) * 0.009;
   col = max(col + grain, 0.0);
   float alpha = clamp(max(col.r, max(col.g, col.b)) * 1.8, 0.0, 0.85);
-  // The aurora disappears as white light takes over (moment 05).
   col *= 1.0 - uFlood;
   alpha *= 1.0 - uFlood;
   gl_FragColor = vec4(min(col, vec3(alpha)), alpha);

@@ -35,8 +35,6 @@ export async function createSale(
     return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid sale data" };
   }
 
-  // Defense-in-depth: re-check stock before hitting the DB trigger, so
-  // a cashier gets a clear message instead of a raw Postgres error.
   const productIds = [...new Set(parsed.data.items.map((i) => i.productId))];
   const { data: products, error: productsError } = await supabase
     .from("products")

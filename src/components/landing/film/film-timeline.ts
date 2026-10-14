@@ -1,17 +1,13 @@
-/** The product film, p = film progress 0..1 (spec §6.7). Everything here is a pure function of p. */
-
 export const LAYER_ORDER = ["backGlass", "battery", "logic", "frame", "display"] as const;
 export type LayerName = (typeof LAYER_ORDER)[number];
 
 const clamp01 = (x: number) => Math.min(1, Math.max(0, x));
 
-/** 0 before a, 1 after b, smooth in between. */
 export function ramp(p: number, a: number, b: number): number {
   const t = clamp01((p - a) / (b - a));
   return t * t * (3 - 2 * t);
 }
 
-/** Rises over [a, b], holds, falls over [c, d]. */
 export function window4(p: number, a: number, b: number, c: number, d: number): number {
   return Math.min(ramp(p, a, b), 1 - ramp(p, c, d));
 }
@@ -23,7 +19,6 @@ export function activeAct(p: number): 1 | 2 | 3 | 4 {
 export function actOpacity(p: number) {
   return {
     a1: window4(p, 0.06, 0.1, 0.18, 0.22),
-    // Act 02's title dims while the camera passes between the layers.
     a2: window4(p, 0.29, 0.33, 0.5, 0.54) * (1 - 0.85 * window4(p, 0.38, 0.4, 0.44, 0.46)),
     a2body: window4(p, 0.45, 0.48, 0.5, 0.54),
     a3: window4(p, 0.6, 0.63, 0.74, 0.77),
@@ -33,15 +28,11 @@ export function actOpacity(p: number) {
 }
 
 export interface Pose {
-  /** Rotation about the vertical axis; π shows the back. */
   yaw: number;
   pitch: number;
-  /** Multiplier on the film's base phone height. */
   scale: number;
   exposure: number;
-  /** 0..1 — how much to centre the gap between the logic board and the frame (fly-through). */
   gap: number;
-  /** Horizontal offset as a share of the viewport width (act 02 sits right of its headline). */
   x: number;
 }
 
@@ -58,7 +49,6 @@ const KEYS: Array<[number, Pose]> = [
   [0.58, { yaw: 0.22, pitch: 0.04, scale: 1, exposure: 1, gap: 0, x: 0.04 }],
   [0.645, { yaw: 0, pitch: 0, scale: 1.1, exposure: 1, gap: 0, x: 0 }],
   [0.9, { yaw: 0, pitch: 0, scale: 1.1, exposure: 1, gap: 0, x: 0 }],
-  // The big transition: the phone falls slightly backward as white light takes over.
   [1, { yaw: 0.12, pitch: -0.32, scale: 0.55, exposure: 1.15, gap: 0, x: 0 }],
 ];
 
@@ -80,7 +70,6 @@ export function filmPose(p: number): Pose {
   };
 }
 
-// Locks happen back → front, each snapping in with an accelerating ease.
 const LOCKS: Record<LayerName, [number, number] | null> = {
   backGlass: [0.5, 0.52],
   battery: [0.52, 0.535],
@@ -114,7 +103,6 @@ export function filmBeats(p: number) {
     map: ramp(p, 0.77, 0.83),
     notify: ramp(p, 0.85, 0.88),
     ui: window4(p, 0.59, 0.61, 0.96, 0.99),
-    // Moment 05: lines escape the screen, white floods in, lines become the store's guides, the phone lands.
     escape: ramp(p, 0.9, 0.945),
     flood: ramp(p, 0.92, 0.985),
     guides: ramp(p, 0.945, 0.995),

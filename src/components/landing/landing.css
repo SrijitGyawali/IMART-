@@ -1,4 +1,3 @@
-/* ============ Landing page (home) ============ */
 .landing {
   --stage: #050706;
   --signal: #9fe5c2;
@@ -14,11 +13,8 @@
   --ease-ui: cubic-bezier(.2, .7, .2, 1);
   --ease-normal: cubic-bezier(.16, 1, .3, 1);
   --header-h: 138px;
-  /* Positioned without a z-index: a containing block for the hero word, not a stacking context. */
   position: relative;
   display: block;
-  /* Scaled planes (the hero word grows ×1.55) must never widen the page; clip, unlike hidden,
-     creates no scroll container, so the sticky film still pins to the viewport. */
   overflow-x: clip;
 }
 .landing-container { width: min(1280px, calc(100% - 80px)); margin-inline: auto; }
@@ -26,9 +22,6 @@
 .landing-label-signal { color: var(--signal); }
 .landing-label-brand { color: var(--brand); }
 
-/* ---------- Header on the landing page ----------
-   The navbar marks itself data-landing on "/" during SSR, so the dark header is right before the
-   landing markup is parsed (no flash). :has() only follows the scroll stage. */
 .store-header[data-landing] {
   position: fixed;
   inset: 0 0 auto;
@@ -38,9 +31,7 @@
   transition: opacity .4s cubic-bezier(.16, 1, .3, 1), visibility .4s;
 }
 .storefront:not(:has(.landing[data-stage="light"])) .store-header[data-landing] { background: transparent; border-bottom-color: transparent; }
-/* Dark text once the flood has turned the page white; the bar itself stays see-through until the store arrives. */
 .storefront:not(:has(.landing:is([data-stage="light"], [data-flooded]))) .store-header[data-landing] { color: #eef3ef; }
-/* A soft scrim under the see-through header so content scrolling beneath never fights the logo. */
 .store-header[data-landing]::before {
   content: "";
   position: absolute;
@@ -60,13 +51,11 @@
 .storefront:not(:has(.landing:is([data-stage="light"], [data-flooded]))) .store-header[data-landing] .store-search { background: rgba(255, 255, 255, .06); border-color: rgba(255, 255, 255, .14); }
 .storefront:not(:has(.landing:is([data-stage="light"], [data-flooded]))) .store-header[data-landing] .store-search input { color: #eef3ef; }
 .storefront:not(:has(.landing:is([data-stage="light"], [data-flooded]))) .store-header[data-landing] .store-search input::placeholder { color: rgba(238, 243, 239, .55); }
-/* During the film the navigation simplifies to logo + bag. */
 .storefront:has(.landing[data-stage="film"]) .store-header[data-landing] :is(.store-navigation:not(.is-open), .store-search, .header-help) {
   opacity: 0;
   visibility: hidden;
 }
 
-/* ---------- Boot (moment 01) ---------- */
 .boot { display: none; position: fixed; inset: 0; z-index: 90; pointer-events: none; }
 html[data-boot="play"] .boot { display: block; }
 .boot-curtain {
@@ -86,23 +75,16 @@ html[data-boot="play"] .boot { display: block; }
 .boot-dot { display: inline-block; width: .14em; height: .14em; margin-left: .05em; border-radius: 50%; background: #3ddc84; opacity: 0; }
 .boot-signal { position: absolute; left: 50%; top: 50%; width: 8px; height: 8px; margin: -4px 0 0 -4px; border-radius: 4px; background: #3ddc84; box-shadow: 0 0 16px #3ddc84; opacity: 0; }
 
-/* ---------- Hero entrance (pre-paint state set by the boot gate; 3 s safety reveal without JS) ---------- */
 html[data-entrance="pending"] .hero-copy > * { opacity: 0; animation: landing-reveal-fallback 0s linear 3s forwards; }
 @keyframes landing-reveal-fallback { to { opacity: 1; } }
 
-/* ---------- Depth planes (pointer, desktop high tier) ----------
-   GSAP folds CSS `translate` into its own transforms on elements it tweens (.hero-word, .hero-copy),
-   so the pointer's depth offsets (inline `translate`, set by trackPointer) live on children GSAP
-   never touches: .hero-word-inner and each child of .hero-copy. */
 .hero-word-inner { display: block; }
 .hero-copy { transform-origin: left center; }
 .hero-device-slot { touch-action: pan-y; }
 
-/* ---------- Magnetic CTAs (StringTune writes --magnetic-x/y in px) ---------- */
 .landing-cta[data-string="magnetic"] { translate: calc(var(--magnetic-x, 0) * 1px) calc(var(--magnetic-y, 0) * 1px); }
 .landing-cta[data-string="magnetic"] .cta-arrow { display: inline-flex; translate: calc(var(--magnetic-x, 0) * .6px) calc(var(--magnetic-y, 0) * .6px); }
 
-/* ---------- Precision cursor ---------- */
 .cursor-ring {
   position: fixed;
   left: 0;
@@ -128,13 +110,9 @@ html[data-entrance="pending"] .hero-copy > * { opacity: 0; animation: landing-re
 .landing:is([data-stage="light"], [data-flooded]) .cursor-ring[data-state="label"] { background: #111613; border-color: #111613; }
 .landing:is([data-stage="light"], [data-flooded]) .cursor-label { color: #fff; }
 
-/* ---------- Capture mode (stills script): only the canvas matters ---------- */
 .landing[data-capture] > :not(.phone-layer) { visibility: hidden; }
 .landing[data-capture] .phone-layer { opacity: 1; }
 
-/* ---------- Dark stage ----------
-   Paint order: .landing-dark background (in flow, static) → hero word (z 0)
-   → fixed 3D layer (z 0, later in the DOM) → hero/film content (z 1) → light store (z 2). */
 .landing-dark {
   color: var(--on-dark);
   background:
@@ -142,7 +120,6 @@ html[data-entrance="pending"] .hero-copy > * { opacity: 0; animation: landing-re
     radial-gradient(120% 90% at 50% 0%, #07120d 0%, var(--stage) 60%);
 }
 
-/* Fixed 3D layer: above the dark background, below all content. */
 .phone-layer {
   position: fixed;
   inset: 0;
@@ -252,7 +229,6 @@ html[data-entrance="pending"] .hero-copy > * { opacity: 0; animation: landing-re
 }
 .hero-scroll-cue i { width: 1px; height: 44px; background: linear-gradient(rgba(255, 255, 255, .55), transparent); }
 
-/* ---------- Film (Phase 1: stacked, unpinned) ---------- */
 .landing-film { position: relative; z-index: 1; padding: 6vh 0 16vh; }
 .film-act { min-height: 88vh; display: grid; align-content: center; max-width: 540px; }
 .film-act h2 { margin-top: 16px; font-size: clamp(40px, 5.4vw, 84px); font-weight: 600; letter-spacing: -.035em; line-height: .95; text-transform: uppercase; }
@@ -260,7 +236,6 @@ html[data-entrance="pending"] .hero-copy > * { opacity: 0; animation: landing-re
 .film-act-body { margin-top: 22px; max-width: 400px; color: var(--on-dark-muted); font-size: 15px; line-height: 1.8; }
 .film-act-meta { margin-top: 26px; display: flex; flex-wrap: wrap; gap: 8px 18px; font-size: 10px; letter-spacing: .2em; text-transform: uppercase; color: rgba(238, 243, 239, .5); }
 
-/* ---------- Light store ---------- */
 .landing-store { position: relative; z-index: 2; background: var(--paper); color: var(--ink); }
 .landing-store [id] { scroll-margin-top: calc(var(--header-h) + 16px); }
 .store-row-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; margin-bottom: 32px; }
@@ -344,7 +319,6 @@ html[data-entrance="pending"] .hero-copy > * { opacity: 0; animation: landing-re
 .visit-body h2 + p { margin-top: 12px; color: var(--muted); font-size: 14px; line-height: 1.7; }
 .visit-actions { display: flex; flex-direction: column; align-items: flex-start; gap: 16px; }
 
-/* ---------- Responsive ---------- */
 @media (max-width: 1100px) {
   .landing-container, .rail-track { width: calc(100% - 48px); }
   .showcase-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
@@ -391,7 +365,6 @@ html[data-entrance="pending"] .hero-copy > * { opacity: 0; animation: landing-re
   .landing *, .landing *::before, .landing *::after { transition-duration: 0s !important; }
 }
 
-/* ---------- Pinned product film (only when data-film="pinned") ---------- */
 .film-rail, .film-labels { display: none; }
 .landing[data-film="pinned"] .landing-film { height: 500vh; padding: 0; }
 .landing[data-film="pinned"] .film-stage { position: sticky; top: 0; height: 100vh; height: 100svh; overflow: hidden; }
@@ -442,8 +415,6 @@ html[data-entrance="pending"] .hero-copy > * { opacity: 0; animation: landing-re
   .landing[data-film="pinned"] .film-labels { display: none; }
 }
 
-/* ---------- Moment 05: white flood + escaping lines ---------- */
-/* White light floods in from behind the phone (under the canvas, so the phone stays on top). */
 .landing-flood {
   position: fixed;
   inset: 0;
@@ -464,8 +435,6 @@ html[data-entrance="pending"] .hero-copy > * { opacity: 0; animation: landing-re
   filter: drop-shadow(0 0 calc((1 - var(--guide, 0)) * 6px) rgba(61, 220, 132, .7));
 }
 
-/* ---------- The living store ---------- */
-/* Rail tiles lean toward the cursor and a soft light follows it (store-motion writes the vars). */
 .rail-tile {
   position: relative;
   transform: perspective(900px) rotateX(var(--ry, 0deg)) rotateY(var(--rx, 0deg));
@@ -482,18 +451,14 @@ html[data-entrance="pending"] .hero-copy > * { opacity: 0; animation: landing-re
   background: radial-gradient(240px circle at var(--mx, 50%) var(--my, 50%), rgba(61, 220, 132, .16), transparent 62%);
 }
 .rail-tile:hover::after { opacity: 1; }
-/* Product cards lift their image and nudge the arrow. */
 .showcase-grid .shop-product { transition: border-color .2s, box-shadow .35s var(--ease-normal); }
 .showcase-grid .shop-product-image img { transition: transform .45s var(--ease-normal); }
 .showcase-grid .shop-product:hover .shop-product-image img { transform: translateY(-5px) scale(1.02); }
 .showcase-grid .shop-product:hover { box-shadow: 0 14px 34px rgba(30, 74, 37, .1); }
 .showcase-grid .product-card-bottom > span { transition: transform .3s var(--ease-normal); }
 .showcase-grid .shop-product:hover .product-card-bottom > span { transform: translateX(4px); }
-/* Scaled SVG parts grow from their own centre, not the viewBox origin. */
 .visit-pin circle { transform-box: fill-box; transform-origin: center; }
-/* FAQ answers animate by height on this wrapper (the <p> keeps its padding). */
 .faq-answer { overflow: hidden; }
-/* Service lines draw in after the numbers roll; hover still widens them. */
 @keyframes service-line-in { from { width: 0; } }
 @media (prefers-reduced-motion: no-preference) {
   .landing[data-tier] .service-list:not(.is-in) .service-line::before { width: 0; }

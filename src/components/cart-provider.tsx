@@ -6,7 +6,6 @@ import type { CartItem } from "@/lib/types";
 const STORAGE_KEY = "imart-cart";
 const EMPTY: CartItem[] = [];
 
-// The cart lives in localStorage; this small store keeps every subscriber (and other tabs) in sync.
 const listeners = new Set<() => void>();
 let cached: CartItem[] | null = null;
 
@@ -16,7 +15,7 @@ function readCart(): CartItem[] {
     const parsed: unknown = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? "[]");
     cached = Array.isArray(parsed) ? (parsed as CartItem[]) : EMPTY;
   } catch {
-    cached = EMPTY; // corrupted cart — start fresh
+    cached = EMPTY;
   }
   return cached;
 }
@@ -26,7 +25,6 @@ function writeCart(next: CartItem[]) {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
   } catch {
-    // storage full or blocked — the cart still works for this page view
   }
   listeners.forEach((listener) => listener());
 }
@@ -83,7 +81,6 @@ const CartContext = createContext<CartContextValue | null>(null);
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
   const items = useSyncExternalStore(subscribe, readCart, () => EMPTY);
-  // False during server render and hydration, true once the saved cart has been read.
   const hydrated = useSyncExternalStore(noopSubscribe, () => true, () => false);
 
   const value = useMemo<CartContextValue>(

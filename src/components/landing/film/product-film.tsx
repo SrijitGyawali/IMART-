@@ -28,7 +28,6 @@ const ACTS = [
   },
 ];
 
-/** Server-rendered acts; when motion is allowed the film pins and one scroll-scrubbed timeline plays them. */
 export function ProductFilm() {
   return (
     <section className="landing-film" data-stage-section="film" aria-label="Inside iMart">
